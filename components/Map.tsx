@@ -10,12 +10,18 @@ const Map = () => {
     const mapRef = useRef<mapboxgl.Map | null>(null);
   
     useEffect(() => {
-      mapboxgl.accessToken = "pk.eyJ1IjoiZHlsYW53ayIsImEiOiJjbTJ3Y2dvNnAwNWE2MmpxMndlcGNmdnV2In0.jJTZ-WlDOdKqez58HYGmCA";
+      
+      // Dylan's access token
+      //mapboxgl.accessToken = "pk.eyJ1IjoiZHlsYW53ayIsImEiOiJjbTJ3Y2dvNnAwNWE2MmpxMndlcGNmdnV2In0.jJTZ-WlDOdKqez58HYGmCA";
+
+      // Ethan's access token
+      mapboxgl.accessToken = "pk.eyJ1IjoiZXRoYWFhbiIsImEiOiJja3AzN2JuNTIxcHpwMnBxcWNmNnc2bXJvIn0.FNggbSkQ3ULC55kwLEJZJg";
       
       if (mapContainerRef.current) {
         mapRef.current = new mapboxgl.Map({
           container: mapContainerRef.current as HTMLElement,
-          style: "mapbox://styles/mapbox/navigation-night-v1",
+          //style: "mapbox://styles/mapbox/navigation-night-v1",
+          style: "mapbox://styles/ethaaan/cldfgnal3000201nyv4534tvx", // this one only works with my access token
           zoom: 3
         });
       }

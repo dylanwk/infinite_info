@@ -33,7 +33,7 @@ const Map = () => {
     if (mapContainerRef.current) {
       mapRef.current = new mapboxgl.Map({
         container: mapContainerRef.current as HTMLElement,
-        style: "mapbox://styles/ethaaan/cldfgnal3000201nyv4534tvx", // this one only works with Ethan's access token
+        style: "mapbox://styles/ethaaan/cldfgnal3000201nyv4534tvx/draft", // this one only works with Ethan's access token
         zoom: 3,
       });
     }

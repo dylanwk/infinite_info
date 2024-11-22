@@ -1,0 +1,38 @@
+[
+    {
+        "date": "2024-11-21 13:55:12Z",
+        "latitude": 39.874375,
+        "longitude": -102.176968,
+        "altitude": 37998.16,
+        "groundSpeed": 383.9205,
+        "verticalSpeed": -172.1623,
+        "track": 285.9657
+      },
+      {
+        "date": "2024-11-21 13:58:34Z",
+        "latitude": 39.982994,
+        "longitude": -102.574692,
+        "altitude": 37999.836,
+        "groundSpeed": 349.6915,
+        "verticalSpeed": 26.6476,
+        "track": 290.1258
+      },
+      {
+        "date": "2024-11-21 14:01:54Z",
+        "latitude": 40.093696,
+        "longitude": -102.972348,
+        "altitude": 37999.914,
+        "groundSpeed": 351.7333,
+        "verticalSpeed": -25.1237,
+        "track": 289.8553
+      },
+      {
+        "date": "2024-11-21 14:05:14Z",
+        "latitude": 40.2038,
+        "longitude": -103.374344,
+        "altitude": 38000.09,
+        "groundSpeed": 354.3656,
+        "verticalSpeed": -14.4321,
+        "track": 289.5796
+      }
+]

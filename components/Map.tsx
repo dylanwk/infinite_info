@@ -170,7 +170,7 @@ const Map = () => {
             {
               type: "Feature",
               properties: {
-                altitude: 20,
+                altitude: 38000,
                 heading: 285,
               },
               geometry: {
@@ -182,6 +182,7 @@ const Map = () => {
         },
       });
 
+
       mapRef.current?.addLayer({
         id: "plane-layer",
         type: "symbol",
@@ -190,63 +191,14 @@ const Map = () => {
           "icon-image": "test1",
           "icon-rotate": ["get", "heading"],
           "icon-pitch-alignment": "map",
+          "icon-rotation-alignment": "map"
         },
         paint: {
           "icon-opacity": 1,
-          "icon-translate": [0, -400]
+          "symbol-z-offset": ["get", "altitude"],
         },
       });
 
-      const updateIconTranslate = () => {
-        const features = mapRef.current?.queryRenderedFeatures({
-          layers: ["plane-layer"],
-        });
-
-        features?.forEach((feature) => {
-          const altitude = feature?.properties?.altitude; // Building height from GeoJSON
-          const centroid = turf.centroid(feature); // Calculate the centroid of the building
-          const screenPosition = mapRef.current?.project(
-            centroid.geometry.coordinates as [number, number]
-          );
-
-          // Calculate pixel offset for altitude
-          const altitudeInPixels = altitudeToPixelOffset(
-            altitude,
-            screenPosition
-          );
-          //console.log(altitudeInPixels)
-          // Apply icon-translate dynamically
-          console.log(altitudeInPixels)
-          mapRef.current?.setPaintProperty("plane-layer", "icon-translate", [altitudeInPixels[0], altitudeInPixels[1]]);
-        });
-      };
-
-      // Utility function: Convert altitude to pixel offset
-      const altitudeToPixelOffset = (altitude, coordinates) => {
-        const pitch = (mapRef.current?.getPitch() ?? 0) * (Math.PI / 180); // Convert pitch to radians
-        //console.log(mapRef.current?.getPitch())
-        const bearing = (mapRef.current?.getBearing() ?? 0) * (Math.PI / 180); // Convert bearing to radians
-      
-        const scalingFactor = 40; // Scale the altitude to an appropriate screen space size
-
-        // Step 1: Calculate the vertical offset based on altitude
-        const verticalOffset = altitude * scalingFactor;
-
-        // Step 2: Adjust the vertical offset for the map's pitch (how much it's tilted)
-        const adjustedVerticalOffset = verticalOffset * (Math.sin(pitch));
-
-        // Step 3: Account for the bearing to determine the horizontal and vertical screen-space offset
-        const offsetX = adjustedVerticalOffset * Math.sin(bearing);
-        const offsetY = -adjustedVerticalOffset * Math.cos(bearing);
-
-        return [offsetX, offsetY];
-      
-      };
-
-      // Call update function initially and on zoom/move
-       mapRef.current?.on("zoom", updateIconTranslate);
-       mapRef.current?.on("move", updateIconTranslate);
-      // updateIconTranslate();
     });
 
     return () => {

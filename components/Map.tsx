@@ -3,19 +3,6 @@
 import { useRef, useEffect } from "react";
 import mapboxgl from "mapbox-gl";
 
-import { gql, useQuery } from "@apollo/client";
-import client from "@/lib/apolloClient";
-
-// GraphQL Query
-const GET_AIRPORTS = gql`
-  query ExampleQuery($input: AirportsV2Input!) {
-    airportsv2(input: $input) {
-      latitude
-      longitude
-    }
-  }
-`;
-
 import "mapbox-gl/dist/mapbox-gl.css";
 
 const Map = () => {
@@ -45,31 +32,13 @@ const Map = () => {
     };
   }, []);
 
-  /* TEST IMPLEMENTAION OF GQL API
-
-  const variables = { input: { only3d: true } };
-
-  const { data, loading, error } = useQuery(GET_AIRPORTS, {
-    client,
-    variables,
-  });
-
-  if (loading) return <p>Loading...</p>;
-  if (error) return <p>{data} </p>;
-  console.log(error);
-  
-  console.log(data);
-  */
-
   return (
     <>
       <div
         id="map-container"
         className="h-[100vh] w-full"
         ref={mapContainerRef}
-      >
-        
-      </div>
+      ></div>
     </>
   );
 };

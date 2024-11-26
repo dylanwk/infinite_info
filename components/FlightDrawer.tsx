@@ -30,7 +30,7 @@ interface FlightDrawerProps {
 
 export function FlightDrawer({
   trigger,
-  flightId = "abd1b547-63cb-4adb-aa14-3007460a5707",
+  flightId = "648952be-72b8-4516-aab8-bcf7c2093f2f",
   server = "CASUAL",
 }: FlightDrawerProps) {
 

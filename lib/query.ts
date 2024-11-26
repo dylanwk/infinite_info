@@ -1,5 +1,23 @@
 import { gql } from "@apollo/client";
 
+
+// variables = {server: string, max: int}
+// purpose: get flights specifically to add to map
+export const GET_FLIGHTS = gql`
+query FlightsTest($server: Servers!, $max: Int) {
+  flights(server: $server, max: $max) {
+    aircraft
+    altitude
+    callsign
+    latitude
+    longitude
+    flightId
+    heading
+    speed
+  }
+}
+`
+
 export const SIMPLE_FLIGHT_INFO = gql`
   query SimplePlaneInfo($server: Servers!, $flightId: String!) {
   flight(server: $server, flightId: $flightId) {

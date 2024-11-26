@@ -1,4 +1,17 @@
 
+
+// used for mapping flights
+export type Flight_Test = {
+    aircraft: string;
+    altitude: string;
+    callsign: string;
+    latitude: number;
+    longitude: number;
+    flightId: string;
+    heading: number;
+    speed: number;
+}
+
 // Variables for the query
 export interface GetFlightVariables {
     server: string;

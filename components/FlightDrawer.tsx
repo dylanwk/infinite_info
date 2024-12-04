@@ -8,7 +8,6 @@ import {
   DrawerFooter,
   DrawerHeader,
   DrawerTitle,
-  DrawerTrigger,
 } from "@/components/ui/drawer";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -20,30 +19,25 @@ import client from "@/lib/apolloClient";
 import { SIMPLE_FLIGHT_INFO } from "@/lib/query";
 import { SimpleFlightInfo } from "@/lib/types";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 interface FlightDrawerProps {
-  trigger?: JSX.Element;
-  flightId?: string;
-  server?: string;
+  flightId: string | null;
+  server: string;
 }
 
 export function FlightDrawer({
-  trigger,
-  flightId = "648952be-72b8-4516-aab8-bcf7c2093f2f",
-  server = "CASUAL",
+  flightId,
+  server,
 }: FlightDrawerProps) {
 
-
   const [flight, setFlight] = useState<SimpleFlightInfo | null>(null);
+  const [drawerOpen, setDrawerOpen] = useState(false);
 
-  // for now use lazy query because we only want to query when the drawer trigger is 
-  // clicked, not when the component is loaded, which is when the page is called
   const [getFlightInfo, { loading, error }] = useLazyQuery(SIMPLE_FLIGHT_INFO, {
     client,
     onCompleted: (data) => {
       if (data?.flight) {
-        // for now it only queries simple stuff (floats, and strings)
         const flightData: SimpleFlightInfo = {
           latitude: parseFloat(data.flight.latitude),
           longitude: parseFloat(data.flight.longitude),
@@ -65,14 +59,18 @@ export function FlightDrawer({
     },
   });
 
-  // on open, call the query
-  const handleOpen = () => {
-    getFlightInfo({ variables: { server, flightId } });
-  };
+  // Effect to handle flightId changes
+  useEffect(() => {
+    if (flightId) {
+      setDrawerOpen(true);
+      getFlightInfo({ variables: { server, flightId } });
+    } else {
+      setDrawerOpen(false);
+    }
+  }, [flightId, server, getFlightInfo]);
 
   return (
-    <Drawer direction="right">
-      <DrawerTrigger onClick={handleOpen}>{trigger}</DrawerTrigger>
+    <Drawer open={drawerOpen} onOpenChange={setDrawerOpen} direction="right">
       <DrawerContent className="sm:max-w-[425px]">
         <ScrollArea className="h-[90vh]">
           <DrawerHeader>

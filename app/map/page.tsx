@@ -6,7 +6,6 @@ export default function map() {
   return (
     <>
       <Map />
-      <FloatingSidebar />
     </>
   );
 }

@@ -24,11 +24,15 @@ import { useEffect, useState } from "react";
 interface FlightDrawerProps {
   flightId: string | null;
   server: string;
+  handleClose: () => void;
+  handleOpen: () => void
 }
 
 export function FlightDrawer({
   flightId,
   server,
+  handleClose,
+  handleOpen,
 }: FlightDrawerProps) {
 
   const [flight, setFlight] = useState<SimpleFlightInfo | null>(null);
@@ -55,6 +59,7 @@ export function FlightDrawer({
           livery: data.flight.livery,
         };
         setFlight(flightData);
+        handleOpen();
       }
     },
   });
@@ -64,13 +69,14 @@ export function FlightDrawer({
     if (flightId) {
       setDrawerOpen(true);
       getFlightInfo({ variables: { server, flightId } });
+      
     } else {
       setDrawerOpen(false);
     }
   }, [flightId, server, getFlightInfo]);
 
   return (
-    <Drawer open={drawerOpen} onOpenChange={setDrawerOpen} direction="right">
+    <Drawer open={drawerOpen} onClose={handleClose} shouldScaleBackground onOpenChange={setDrawerOpen} direction="right">
       <DrawerContent className="sm:max-w-[425px]">
         <ScrollArea className="h-[90vh]">
           <DrawerHeader>

@@ -5,7 +5,11 @@
  */
 
 import { useRef, useEffect, useState } from "react";
-import mapboxgl, { GeoJSONSource, GeoJSONSourceSpecification, MapMouseEvent } from "mapbox-gl";
+import mapboxgl, {
+  GeoJSONSource,
+  GeoJSONSourceSpecification,
+  MapMouseEvent,
+} from "mapbox-gl";
 import "mapbox-gl/dist/mapbox-gl.css";
 import { Flight_Test } from "@/lib/types";
 import { useLazyQuery } from "@apollo/client";
@@ -22,8 +26,9 @@ const Map = () => {
   const flightsRef = useRef<Flight_Test[]>([]);
   const [, forceUpdate] = useState(0); // Only used to trigger re-renders
 
-  const [drawerOpen, setDrawerOpen] = useState(false);
   const [selectedFlight, setSelectedFlight] = useState<string | null>(null);
+
+  const [drawerExpanded, setDrawerExpanded] = useState(false);
 
   const aircraftDataSourceRef = useRef<GeoJSONSource | null>(null);
 
@@ -38,7 +43,7 @@ const Map = () => {
         zoom: 1.8,
       });
 
-      mapRef.current.on('click', handleMapClick);
+      mapRef.current.on("click", handleMapClick);
       mapRef.current.on("click", "aircraft-layer", handleAircraftClick as any);
 
       mapRef.current.on("style.load", () => {
@@ -53,20 +58,26 @@ const Map = () => {
     };
   }, []);
 
+  const handleDrawerClose = () => {
+    setDrawerExpanded(false);
+  };
+
+  const handleDrawerOpen = () => {
+    setDrawerExpanded(true);
+  };
+
   const handleAircraftClick = (
     e: MapMouseEvent & { features?: Feature<LineString, GeoJsonProperties>[] }
   ) => {
     const flightId = e.features?.[0]?.properties?.id as string | undefined;
     if (flightId) {
       setSelectedFlight(flightId);
-      setDrawerOpen(true); // Open the drawer when a flight is selected
     }
   };
 
   const handleMapClick = () => {
     setSelectedFlight(null);
-    setDrawerOpen(false);
-  }
+  };
 
   const [fetchFlights] = useLazyQuery(GET_FLIGHTS, {
     client,
@@ -108,7 +119,9 @@ const Map = () => {
     const dataSource = mapRef.current.getSource("aircraft") as GeoJSONSource;
     if (!dataSource) {
       mapRef.current.addSource("aircraft", geoJsonSource);
-      aircraftDataSourceRef.current = mapRef.current.getSource("aircraft") as GeoJSONSource;
+      aircraftDataSourceRef.current = mapRef.current.getSource(
+        "aircraft"
+      ) as GeoJSONSource;
 
       mapRef.current.addLayer({
         id: "aircraft-layer",
@@ -132,17 +145,23 @@ const Map = () => {
     if (mapRef.current) {
       mapRef.current.resize();
     }
-  }, [drawerOpen]);
+  }, [drawerExpanded]);
 
   return (
     <>
+      
       <div
         id="map-container"
         ref={mapContainerRef}
-        className={`h-[100vh] ${drawerOpen ? "w-4/5" : "w-full"}`}
+        className={`h-[100vh] transition duration-1000 ${drawerExpanded ? "w-3/4" : "w-full"}`}
       />
-      {drawerOpen && selectedFlight && (
-        <FlightDrawer flightId={selectedFlight} server="CASUAL" />
+      {selectedFlight && (
+        <FlightDrawer
+          handleOpen={handleDrawerOpen}
+          flightId={selectedFlight}
+          server="CASUAL"
+          handleClose={handleDrawerClose}
+        />
       )}
     </>
   );

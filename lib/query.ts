@@ -1,6 +1,22 @@
 import { gql } from "@apollo/client";
 
 
+// variables = none
+// purpose: get sessions dynamically
+export const GET_SESSIONS = gql`
+query GET_SESSIONS {
+  sessionsv2 {
+    maxUsers
+    worldType
+    userCount
+    type
+    name
+    minimumGradeLevel
+    id
+  }
+}`
+
+
 // variables = {server: string, max: int}
 // purpose: get flights specifically to add to map
 export const GET_FLIGHTS = gql`

@@ -4,7 +4,7 @@
  * Map Component for displaying flights using Mapbox GL.
  */
 
-import { useRef, useEffect, useState } from "react";
+import { useRef, useEffect, useState, useCallback } from "react";
 import mapboxgl, {
   GeoJSONSource,
   GeoJSONSourceSpecification,
@@ -32,6 +32,8 @@ import {
   DialogTitle,
 } from "./ui/dialog";
 import { Button } from "./ui/button";
+import { MapHeader } from "./MapHeader";
+
 
 const Map = () => {
   // #region State and Refs
@@ -48,6 +50,8 @@ const Map = () => {
   const timeoutModalState = useRef(false);
   const [timeoutModal, setTimeoutModal] = useState(false);
   const activityTimerRef = useRef(new Date());
+
+  const [selectedSession, setSelectedSession] = useState<string>("EXPERT");
 
   // #endregion
 
@@ -78,7 +82,8 @@ const Map = () => {
       mapRef.current.on("style.load", () => {
         styleLoadedRef.current = true;
         mapRef.current?.resize();
-        fetchFlights();
+        console.log(selectedSession);
+        fetchFlights(selectedSession);
         trackUserAction();
       });
     }
@@ -141,7 +146,7 @@ const Map = () => {
   // use useEffect so it only runs on mounts not renders (5 minute timeout)
   useEffect(() => {
     const interval = setInterval(() => {
-      if (new Date().getTime() - activityTimerRef.current.getTime() > 300000) {
+      if (new Date().getTime() - activityTimerRef.current.getTime() > 3000) {
         handleTimeoutModalOpen();
       }
     }, 1000);
@@ -156,7 +161,7 @@ const Map = () => {
         if (timeoutModalState.current) {
           resolve("Timeout modal open");
         } else {
-          fetchFlights();
+          fetchFlights(selectedSession);
           resolve("Updated");
         }
       });
@@ -167,9 +172,8 @@ const Map = () => {
 
   // #region Apollo Lazy Query
 
-  const [fetchFlights] = useLazyQuery(GET_FLIGHTS, {
+  const [fetchFlightsQuery] = useLazyQuery(GET_FLIGHTS, {
     client,
-    variables: { server: "CASUAL", max: 100 },
     fetchPolicy: "network-only", // Dont use cache, so query updates coordinates
     onCompleted: (data: { flights: Flight_Test[] }) => {
       if (data?.flights) {
@@ -178,6 +182,14 @@ const Map = () => {
       }
     },
   });
+
+  const fetchFlights = useCallback(
+    (session: string) => {
+      console.log(session)
+      fetchFlightsQuery({ variables: { server: session, max: 100 } });
+    },
+    [fetchFlightsQuery]
+  );
 
   // #endregion
 
@@ -255,6 +267,10 @@ const Map = () => {
   // #region Render
   return (
     <>
+      <MapHeader
+        selectedSession={selectedSession}
+        onSessionChange={(e) => setSelectedSession(e)}
+      />
       <div
         id="map-container"
         ref={mapContainerRef}
@@ -275,7 +291,10 @@ const Map = () => {
           </DialogHeader>
           <DialogFooter>
             <DialogClose asChild>
-              <Button type="reset" onClick={handleTimeoutModalClose}>
+              <Button
+                type="reset"
+                onClick={handleTimeoutModalClose}
+              >
                 Continue
               </Button>
             </DialogClose>
@@ -286,7 +305,7 @@ const Map = () => {
         <FlightDrawer
           handleOpen={handleDrawerOpen}
           flightId={selectedFlight}
-          server="CASUAL"
+          server={selectedSession}
           handleClose={handleDrawerClose}
         />
       )}

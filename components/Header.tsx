@@ -31,7 +31,7 @@ const Header = () => {
               height={100}
             />
           </Link>
-          {/* Button on the right */}
+          {/* Button on the right 
           <div className="flex items-center gap-x-1 md:gap-x-2 ms-auto py-1 md:ps-6">
             <Button
               variant={"outline"}
@@ -46,6 +46,7 @@ const Header = () => {
               Token
             </Button>
           </div>
+          */}
         </div>
       </Container>
     </div>

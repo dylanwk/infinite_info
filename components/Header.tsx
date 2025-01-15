@@ -3,21 +3,11 @@ import Image from "next/image";
 import Link from "next/link";
 
 import Container from "./Container";
-
-import { infiniteInfoSignIn, getUserToken } from "@/lib/firebase/auth";
-import { Button } from "./ui/button";
+import { ModeToggle } from "./ModeToggle";
+import React from "react";
 
 const Header = () => {
-  const handleSignIn = (event: { preventDefault: () => void }) => {
-    event.preventDefault();
-    infiniteInfoSignIn();
-  };
 
-  const handleGetToken = async (event: { preventDefault: () => void }) => {
-    event.preventDefault();
-    const token = await getUserToken();
-    console.log(token);
-  };
 
   return (
     <div className="z-10 mt-2 w-full bg-transparent absolute">
@@ -31,22 +21,7 @@ const Header = () => {
               height={100}
             />
           </Link>
-          {/* Button on the right 
-          <div className="flex items-center gap-x-1 md:gap-x-2 ms-auto py-1 md:ps-6">
-            <Button
-              variant={"outline"}
-              onClick={handleSignIn}
-            >
-              Sign in
-            </Button>
-            <Button
-              variant={"outline"}
-              onClick={handleGetToken}
-            >
-              Token
-            </Button>
-          </div>
-          */}
+          <ModeToggle />
         </div>
       </Container>
     </div>

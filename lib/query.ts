@@ -16,6 +16,17 @@ query GET_SESSIONS {
   }
 }`
 
+// variables = session: string (sessionId)
+export const FlightsV2 = gql`
+query Flightsv2($input: FlightsV2Input!) {
+  flightsv2(input: $input) {
+    id
+    latitude
+    longitude
+    heading
+  }
+}`
+
 
 // variables = {server: string, max: int}
 // purpose: get flights specifically to add to map
@@ -53,6 +64,49 @@ export const SIMPLE_FLIGHT_INFO = gql`
     livery
   }
 }`
+
+export const GET_FLIGHTV2 = gql`
+  query Flightv2($input: FlightV2Input!) {
+  flightv2(input: $input) {
+    latitude
+    longitude
+    speed
+    id
+    userId
+    altitude
+    callsign
+    aircraft
+    verticalSpeed
+    username
+    heading
+    org
+    livery
+    
+  }
+}`
+
+// input -> session, id
+export const GET_FLIGHTV3 = gql`
+query Flightv2($input: FlightV2Input!) {
+  flightv2(input: $input) {
+    latitude
+    longitude
+    speed
+    flightId
+    userId
+    landingETA
+    altitude
+    callsign
+    aircraft
+    verticalSpeed
+    username
+    heading
+    org
+    livery
+  }
+}
+`
+
 
 export const GET_FLIGHT = gql`
 query TrackAndFPLV2($server: Servers!, $flightId: String!) {

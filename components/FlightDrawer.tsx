@@ -15,8 +15,8 @@ import { Loader2, Map, ChartNetwork } from "lucide-react";
 
 import { useLazyQuery } from "@apollo/client";
 import client from "@/lib/apolloClient";
-import { SIMPLE_FLIGHT_INFO } from "@/lib/query";
-import { SimpleFlightInfo } from "@/lib/types";
+import { GET_FLIGHTV2, SIMPLE_FLIGHT_INFO } from "@/lib/query";
+import { FlightV2Type, SimpleFlightInfo } from "@/lib/types";
 
 import { useEffect, useState } from "react";
 
@@ -25,39 +25,39 @@ import FlightIcon from "@mui/icons-material/Flight";
 
 interface FlightDrawerProps {
   flightId: string | null;
-  server: string;
+  currentSession: string;
   handleClose: () => void;
   handleOpen: () => void;
 }
 
 export function FlightDrawer({
   flightId,
-  server,
+  currentSession,
   handleClose,
   handleOpen,
 }: FlightDrawerProps) {
-  const [flight, setFlight] = useState<SimpleFlightInfo | null>(null);
+  const [flight, setFlight] = useState<FlightV2Type | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
 
-  const [getFlightInfo, { loading, error }] = useLazyQuery(SIMPLE_FLIGHT_INFO, {
+  const [getFlightInfo, { loading, error }] = useLazyQuery(GET_FLIGHTV2, {
     client,
     onCompleted: (data) => {
-      if (data?.flight) {
-        const flightData: SimpleFlightInfo = {
-          latitude: parseFloat(data.flight.latitude),
-          longitude: parseFloat(data.flight.longitude),
-          speed: parseFloat(data.flight.speed),
-          flightId: data.flight.flightId,
-          userId: data.flight.userId,
-          landingETA: data.flight.landingETA,
-          altitude: parseFloat(data.flight.altitude),
-          callsign: data.flight.callsign,
-          aircraft: data.flight.aircraft,
-          verticalSpeed: parseFloat(data.flight.verticalSpeed),
-          username: data.flight.username,
-          heading: parseFloat(data.flight.heading),
-          org: data.flight.org,
-          livery: data.flight.livery,
+      console.log(data)
+      if (data?.flightv2) {
+        const flightData: FlightV2Type = {
+          latitude: parseFloat(data.flightv2.latitude),
+          longitude: parseFloat(data.flightv2.longitude),
+          speed: parseFloat(data.flightv2.speed),
+          id: data.flightv2.id,
+          userId: data.flightv2.userId,
+          altitude: parseFloat(data.flightv2.altitude),
+          callsign: data.flightv2.callsign,
+          aircraft: data.flightv2.aircraft,
+          verticalSpeed: parseFloat(data.flightv2.verticalSpeed),
+          username: data.flightv2.username,
+          heading: parseFloat(data.flightv2.heading),
+          org: data.flightv2.org,
+          livery: data.flightv2.livery,
         };
         setFlight(flightData);
         handleOpen();
@@ -69,11 +69,11 @@ export function FlightDrawer({
   useEffect(() => {
     if (flightId) {
       setDrawerOpen(true);
-      getFlightInfo({ variables: { server, flightId } });
+      getFlightInfo({ variables: { input: { id: flightId, session: "9bdfef34-f03b-4413-b8fa-c29949bb18f8"  } } });
     } else {
       setDrawerOpen(false);
     }
-  }, [flightId, server, getFlightInfo]);
+  }, [flightId, currentSession, getFlightInfo]);
 
   return (
     <Drawer
@@ -93,7 +93,7 @@ export function FlightDrawer({
           </CardContent>
         </Card>
       ) : (
-        <DrawerContent className="sm:max-w-[425px]">
+        <DrawerContent className="sm:max-w-[425px] z-[100]">
           <ScrollArea className="h-[90vh]">
             <DrawerHeader className="mt-2">
               <DrawerTitle className="text-3xl font-bold">
@@ -177,7 +177,7 @@ export function FlightDrawer({
                         <div>
                           <p className="text-sm text-gray-500">Flight ID</p>
                           <p className="font-medium truncate">
-                            {flight.flightId}
+                            {flight.id}
                           </p>
                         </div>
                       </div>
@@ -217,7 +217,6 @@ export function FlightDrawer({
                         <div>
                           <p className="text-sm text-gray-500">Landing ETA</p>
                           <p className="font-medium">
-                            {flight.landingETA ?? "Not available"}
                           </p>
                         </div>
                         <div>

@@ -14,6 +14,7 @@ import {
   SelectValue,
 } from "./ui/select";
 import { useCallback, useState } from "react";
+import { Loader } from "lucide-react";
 
 // Define type for session data
 interface SessionType {
@@ -26,22 +27,15 @@ interface SessionType {
   id: string;
 }
 
-// Define props interface with proper types for session handling
 interface MapHeaderProps {
   selectedSession: string;
-  onSessionChange: (value: string) => void; // Updated to match shadcn/ui Select onChange
+  onSessionChange: (value: string) => void;
 }
 
-/**
- * MapHeader Component
- * Displays a header with session selector and logo
- * Uses shadcn/ui Select component for session selection
- */
 export const MapHeader: React.FC<MapHeaderProps> = ({
   selectedSession,
   onSessionChange,
 }) => {
-  // State for storing sessions data
   const [sessions, setSessions] = useState<SessionType[]>([]);
 
   // Query hook for fetching sessions
@@ -76,21 +70,29 @@ export const MapHeader: React.FC<MapHeaderProps> = ({
     <div className="absolute z-10 mt-2 w-full bg-transparent">
       <Container>
         <div className="flex flex-row items-center justify-between gap-3 md:gap-0">
-          <Select value={selectedSession} onValueChange={handleSessionChange}>
-            <SelectTrigger className="w-[180px] bg-transparent backdrop-blur-lg backdrop-filter">
-              <SelectValue placeholder="Select a server" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectGroup>
-                <SelectLabel>Servers</SelectLabel>
-                {sessions.map((session) => (
-                  <SelectItem key={session.id} value={session.name}>
-                    {session.name} ({session.userCount}/{session.maxUsers})
-                  </SelectItem>
-                ))}
-              </SelectGroup>
-            </SelectContent>
-          </Select>
+          {loading ? (
+            <Select>
+              <SelectTrigger className="w-[180px] bg-transparent backdrop-blur-lg backdrop-filter">
+                <Loader /> loading...
+              </SelectTrigger>
+            </Select>
+          ) : (
+            <Select value={selectedSession} onValueChange={handleSessionChange}>
+              <SelectTrigger className="w-[180px] bg-transparent border-2 border-white  backdrop-blur-lg backdrop-filter">
+                <SelectValue placeholder="Select a server" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectGroup>
+                  <SelectLabel>Servers</SelectLabel>
+                  {sessions.map((session) => (
+                    <SelectItem key={session.id} value={session.id}>
+                      {session.name} ({session.userCount}/{session.maxUsers})
+                    </SelectItem>
+                  ))}
+                </SelectGroup>
+              </SelectContent>
+            </Select>
+          )}
 
           <Link className="flex rounded-xl text-xl" href="/">
             <Image

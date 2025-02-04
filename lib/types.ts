@@ -12,6 +12,13 @@ export type Flight_Test = {
     speed: number;
 }
 
+export type FlightsV2_Type = {
+    id: string,
+    latitude: number,
+    longitude: number,
+    heading: number,
+}
+
 // Variables for the query
 export interface GetFlightVariables {
     server: string;
@@ -34,6 +41,22 @@ export interface SimpleFlightInfo {
     org: string;
     livery: string;
   }
+
+  export type FlightV2Type = {
+      latitude: number;
+      longitude: number;
+      speed: number;
+      id: string;
+      userId: string;
+      altitude: number;
+      callsign: string;
+      aircraft: string;
+      verticalSpeed: number;
+      username: string;
+      heading: number;
+      org: string;
+      livery: string;
+  };
 
 // Main response type for the query
 export interface GetFlightResponse {

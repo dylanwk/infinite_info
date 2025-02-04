@@ -1,9 +1,5 @@
 "use client";
 
-/**
- * Map Component for displaying flights using Mapbox GL.
- */
-
 import { useRef, useEffect, useState, useCallback } from "react";
 import mapboxgl, {
   GeoJSONSource,
@@ -11,9 +7,9 @@ import mapboxgl, {
   MapMouseEvent,
 } from "mapbox-gl";
 import "mapbox-gl/dist/mapbox-gl.css";
-import { Flight_Test } from "@/lib/types";
+import { FlightsV2_Type } from "@/lib/types";
 import { useLazyQuery } from "@apollo/client";
-import { GET_FLIGHTS } from "@/lib/query";
+import { FlightsV2 } from "@/lib/query";
 import client from "@/lib/apolloClient";
 import { FlightDrawer } from "./FlightDrawer";
 import {
@@ -34,15 +30,14 @@ import {
 import { Button } from "./ui/button";
 import { MapHeader } from "./MapHeader";
 
-
 const Map = () => {
   // #region State and Refs
+
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<mapboxgl.Map | null>(null);
   const styleLoadedRef = useRef<boolean>(false);
-
   const aircraftDataSourceRef = useRef<GeoJSONSource | null>(null);
-  const flightsRef = useRef<Flight_Test[]>([]);
+  const flightsRef = useRef<FlightsV2_Type[]>([]);
 
   const [drawerExpanded, setDrawerExpanded] = useState(false);
   const [selectedFlight, setSelectedFlight] = useState<string | null>(null);
@@ -51,11 +46,24 @@ const Map = () => {
   const [timeoutModal, setTimeoutModal] = useState(false);
   const activityTimerRef = useRef(new Date());
 
-  const [selectedSession, setSelectedSession] = useState<string>("EXPERT");
+  const [selectedSession, setSelectedSession] = useState<string>("");
+  const selectedSessionRef = useRef(selectedSession);
+
+  useEffect(() => {
+    selectedSessionRef.current = selectedSession;
+  }, [selectedSession]);
+
+  // Fetch flights when session changes
+  useEffect(() => {
+    if (styleLoadedRef.current && selectedSession) {
+      fetchFlights(selectedSession);
+    }
+  }, [selectedSession]);
 
   // #endregion
 
   // #region Map Initialization
+
   useEffect(() => {
     if (mapContainerRef.current) {
       mapboxgl.accessToken = process.env.NEXT_PUBLIC_ETHANS_MAPBOX_TOKEN || "";
@@ -66,8 +74,9 @@ const Map = () => {
         zoom: 1.8,
       });
 
+      // Event listeners
       mapRef.current.on("click", handleMapClick);
-      mapRef.current.on("click", "aircraft-layer", handleAircraftClick as any); // fails a build command
+      mapRef.current.on("click", "aircraft-layer", handleAircraftClick as any); // Type assertion required
       mapRef.current.on(
         "mouseenter",
         "aircraft-layer",
@@ -82,7 +91,6 @@ const Map = () => {
       mapRef.current.on("style.load", () => {
         styleLoadedRef.current = true;
         mapRef.current?.resize();
-        console.log(selectedSession);
         fetchFlights(selectedSession);
         trackUserAction();
       });
@@ -92,13 +100,21 @@ const Map = () => {
       mapRef.current?.remove();
     };
   }, []);
+
   // #endregion
 
   // #region Event Handlers
 
-  const handleDrawerClose = () => setDrawerExpanded(false);
+  /** Handles closing of flight drawer */
+  const handleDrawerClose = () => {
+    setDrawerExpanded(false);
+    setSelectedFlight(null);
+  };
+
+  /** Handles opening of flight drawer */
   const handleDrawerOpen = () => setDrawerExpanded(true);
 
+  /** Handles clicking on an aircraft */
   const handleAircraftClick = (
     e: MapMouseEvent & {
       features?: (Feature<LineString, GeoJsonProperties> | undefined)[];
@@ -109,17 +125,18 @@ const Map = () => {
     trackUserAction();
   };
 
+  /** Handles clicking on the map (deselects aircraft) */
   const handleMapClick = () => {
     setSelectedFlight(null);
     trackUserAction();
   };
 
-  // Change the cursor to a pointer when the mouse is over the aircraft-layer layer.
+  /** Changes cursor to pointer on aircraft hover */
   const handleAircraftHoverEnter = () => {
     mapRef.current!.getCanvas().style.cursor = "pointer";
   };
 
-  // Change it back to a pointer when it leaves.
+  /** Resets cursor when leaving aircraft */
   const handleAircraftHoverExit = () => {
     mapRef.current!.getCanvas().style.cursor = "";
   };
@@ -143,10 +160,10 @@ const Map = () => {
     timeoutModalState.current = true;
   };
 
-  // use useEffect so it only runs on mounts not renders (5 minute timeout)
+  // Monitor inactivity and trigger timeout modal after 5 minutes
   useEffect(() => {
     const interval = setInterval(() => {
-      if (new Date().getTime() - activityTimerRef.current.getTime() > 3000) {
+      if (new Date().getTime() - activityTimerRef.current.getTime() > 300000) {
         handleTimeoutModalOpen();
       }
     }, 1000);
@@ -154,39 +171,36 @@ const Map = () => {
     return () => clearInterval(interval);
   }, []);
 
-  // aircraft coordinate refresher
+  // Refresh aircraft data every minute
   useEffect(() => {
     const interval = setInterval(() => {
-      return new Promise(async (resolve) => {
-        if (timeoutModalState.current) {
-          resolve("Timeout modal open");
-        } else {
-          fetchFlights(selectedSession);
-          resolve("Updated");
-        }
-      });
+      if (!timeoutModalState.current && selectedSessionRef.current) {
+        fetchFlights(selectedSession);
+      }
     }, 60000); // 1 min
 
     return () => clearInterval(interval);
   }, []);
 
+  // #endregion
+
   // #region Apollo Lazy Query
 
-  const [fetchFlightsQuery] = useLazyQuery(GET_FLIGHTS, {
+  const [fetchFlightsQuery] = useLazyQuery(FlightsV2, {
     client,
-    fetchPolicy: "network-only", // Dont use cache, so query updates coordinates
-    onCompleted: (data: { flights: Flight_Test[] }) => {
-      if (data?.flights) {
-        flightsRef.current = data.flights;
-        updateAircraftLayer(data.flights);
+    fetchPolicy: "network-only",
+    onCompleted: (data: { flightsv2: FlightsV2_Type[] }) => {
+      if (data?.flightsv2) {
+        flightsRef.current = data.flightsv2;
+        updateAircraftLayer(data.flightsv2);
       }
     },
   });
 
+  /** Fetches flights for a given session */
   const fetchFlights = useCallback(
     (session: string) => {
-      console.log(session)
-      fetchFlightsQuery({ variables: { server: session, max: 100 } });
+      fetchFlightsQuery({ variables: { input: { session } } });
     },
     [fetchFlightsQuery]
   );
@@ -195,10 +209,10 @@ const Map = () => {
 
   // #region Map Updates
 
-  const updateAircraftLayer = (flights: Flight_Test[]) => {
+  /** Updates aircraft layer with fetched flight data */
+  const updateAircraftLayer = (flights: FlightsV2_Type[]) => {
     if (!mapRef.current || !styleLoadedRef.current) return;
 
-    // Create the GeoJSON data structure with explicit typing
     const geoJsonData: FeatureCollection = {
       type: "FeatureCollection",
       features: flights.map((flight) => ({
@@ -208,13 +222,9 @@ const Map = () => {
           coordinates: [flight.longitude, flight.latitude],
         },
         properties: {
-          id: flight.flightId,
+          id: flight.id,
           heading: flight.heading,
-          speed: flight.speed,
-          aircraftName: flight.aircraft,
           icon: "plane-icon",
-          callsign: flight.callsign,
-          altitude: flight.altitude,
         },
       })),
     };
@@ -228,10 +238,7 @@ const Map = () => {
       const dataSource = mapRef.current.getSource("aircraft") as GeoJSONSource;
 
       if (!dataSource) {
-        console.log(`Creating data source with ${flights.length} aircraft`);
-
         mapRef.current.addSource("aircraft", geoJsonSource);
-
         aircraftDataSourceRef.current = mapRef.current.getSource(
           "aircraft"
         ) as GeoJSONSource;
@@ -242,17 +249,14 @@ const Map = () => {
           source: "aircraft",
           layout: {
             "icon-image": "test1",
-            "icon-size": 0.5,
+            "icon-size": 0.3,
             "icon-allow-overlap": true,
             "icon-rotate": ["get", "heading"],
             "icon-rotation-alignment": "map",
           },
         });
       } else {
-        console.log(`Updating data source with ${flights.length} aircraft\n`);
-        (mapRef.current.getSource("aircraft") as GeoJSONSource).setData(
-          geoJsonData
-        );
+        dataSource.setData(geoJsonData);
       }
     } catch (error) {
       console.error("Error updating aircraft layer:", error);
@@ -262,6 +266,7 @@ const Map = () => {
   useEffect(() => {
     if (mapRef.current) mapRef.current.resize();
   }, [drawerExpanded]);
+
   // #endregion
 
   // #region Render
@@ -291,10 +296,7 @@ const Map = () => {
           </DialogHeader>
           <DialogFooter>
             <DialogClose asChild>
-              <Button
-                type="reset"
-                onClick={handleTimeoutModalClose}
-              >
+              <Button type="reset" onClick={handleTimeoutModalClose}>
                 Continue
               </Button>
             </DialogClose>
@@ -305,7 +307,7 @@ const Map = () => {
         <FlightDrawer
           handleOpen={handleDrawerOpen}
           flightId={selectedFlight}
-          server={selectedSession}
+          currentSession={selectedSession}
           handleClose={handleDrawerClose}
         />
       )}

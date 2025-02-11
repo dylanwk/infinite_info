@@ -31,6 +31,7 @@ import { Button } from "./ui/button";
 import { MapHeader } from "./MapHeader";
 
 const Map = () => {
+  
   // #region State and Refs
 
   const mapContainerRef = useRef<HTMLDivElement>(null);
@@ -49,57 +50,16 @@ const Map = () => {
   const [selectedSession, setSelectedSession] = useState<string>("");
   const selectedSessionRef = useRef(selectedSession);
 
-  useEffect(() => {
-    selectedSessionRef.current = selectedSession;
-  }, [selectedSession]);
-
-  // Fetch flights when session changes
-  useEffect(() => {
-    if (styleLoadedRef.current && selectedSession) {
-      fetchFlights(selectedSession);
-    }
-  }, [selectedSession]);
-
-  // #endregion
-
-  // #region Map Initialization
-
-  useEffect(() => {
-    if (mapContainerRef.current) {
-      mapboxgl.accessToken = process.env.NEXT_PUBLIC_ETHANS_MAPBOX_TOKEN || "";
-
-      mapRef.current = new mapboxgl.Map({
-        container: mapContainerRef.current,
-        style: "mapbox://styles/ethaaan/cldfgnal3000201nyv4534tvx/draft",
-        zoom: 1.8,
-      });
-
-      // Event listeners
-      mapRef.current.on("click", handleMapClick);
-      mapRef.current.on("click", "aircraft-layer", handleAircraftClick as any); // Type assertion required
-      mapRef.current.on(
-        "mouseenter",
-        "aircraft-layer",
-        handleAircraftHoverEnter
-      );
-      mapRef.current.on(
-        "mouseleave",
-        "aircraft-layer",
-        handleAircraftHoverExit
-      );
-
-      mapRef.current.on("style.load", () => {
-        styleLoadedRef.current = true;
-        mapRef.current?.resize();
-        fetchFlights(selectedSession);
-        trackUserAction();
-      });
-    }
-
-    return () => {
-      mapRef.current?.remove();
-    };
-  }, []);
+  const [fetchFlights] = useLazyQuery(FlightsV2, {
+    client,
+    fetchPolicy: "network-only",
+    onCompleted: (data: { flightsv2: FlightsV2_Type[] }) => {
+      if (data?.flightsv2) {
+        flightsRef.current = data.flightsv2;
+        updateAircraftLayer(data.flightsv2);
+      }
+    },
+  });
 
   // #endregion
 
@@ -114,23 +74,6 @@ const Map = () => {
   /** Handles opening of flight drawer */
   const handleDrawerOpen = () => setDrawerExpanded(true);
 
-  /** Handles clicking on an aircraft */
-  const handleAircraftClick = (
-    e: MapMouseEvent & {
-      features?: (Feature<LineString, GeoJsonProperties> | undefined)[];
-    }
-  ) => {
-    const flightId = e.features?.[0]?.properties?.id as string | undefined;
-    if (flightId) setSelectedFlight(flightId);
-    trackUserAction();
-  };
-
-  /** Handles clicking on the map (deselects aircraft) */
-  const handleMapClick = () => {
-    setSelectedFlight(null);
-    trackUserAction();
-  };
-
   /** Changes cursor to pointer on aircraft hover */
   const handleAircraftHoverEnter = () => {
     mapRef.current!.getCanvas().style.cursor = "pointer";
@@ -140,6 +83,82 @@ const Map = () => {
   const handleAircraftHoverExit = () => {
     mapRef.current!.getCanvas().style.cursor = "";
   };
+
+  const handleAircraftClick = useCallback(
+    (
+      e: MapMouseEvent & {
+        features: (Feature<LineString, GeoJsonProperties> | undefined)[];
+      }
+    ) => {
+      const flightId = e.features?.[0]?.properties?.id as string | undefined;
+      if (flightId) setSelectedFlight(flightId);
+      trackUserAction();
+    },
+    []
+  );
+
+  /** Handles clicking on the map (deselects aircraft) */
+  const handleMapClick = useCallback(() => {
+    setSelectedFlight(null);
+    trackUserAction();
+  }, []);
+
+  // #region Effects
+
+  // Update selected session ref when session changes
+  useEffect(() => {
+    selectedSessionRef.current = selectedSession;
+  }, [selectedSession]);
+
+  // Fetch flights when session changes
+  useEffect(() => {
+    if (styleLoadedRef.current && selectedSession) {
+      fetchFlights({ variables: { input: { session: selectedSession } } });
+    }
+  }, [selectedSession, fetchFlights]);
+
+  useEffect(() => {
+    if (mapContainerRef.current) {
+      mapboxgl.accessToken = process.env.NEXT_PUBLIC_ETHANS_MAPBOX_TOKEN || "";
+
+      mapRef.current = new mapboxgl.Map({
+        container: mapContainerRef.current,
+        style: "mapbox://styles/ethaaan/cldfgnal3000201nyv4534tvx/draft",
+        zoom: 1.8,
+      });
+
+      // Event listeners
+      mapRef.current.on("click", handleMapClick);
+      mapRef.current.on(
+        "click",
+        "aircraft-layer",
+        handleAircraftClick as never
+      ); // Type assertion required
+      mapRef.current.on(
+        "mouseenter",
+        "aircraft-layer",
+        handleAircraftHoverEnter
+      );
+      mapRef.current.on(
+        "mouseleave",
+        "aircraft-layer",
+        handleAircraftHoverExit
+      );
+
+      mapRef.current.on("style.load", () => {
+        styleLoadedRef.current = true;
+        mapRef.current?.resize();
+        fetchFlights({
+          variables: { input: { session: selectedSessionRef.current } },
+        });
+        trackUserAction();
+      });
+    }
+
+    return () => {
+      mapRef.current?.remove();
+    };
+  }, [fetchFlights, handleAircraftClick, handleMapClick]);
 
   // #endregion
 
@@ -175,39 +194,18 @@ const Map = () => {
   useEffect(() => {
     const interval = setInterval(() => {
       if (!timeoutModalState.current && selectedSessionRef.current) {
-        fetchFlights(selectedSession);
+        fetchFlights({
+          variables: { input: { session: selectedSessionRef.current } },
+        });
       }
     }, 60000); // 1 min
 
     return () => clearInterval(interval);
-  }, []);
+  }, [fetchFlights]);
 
   // #endregion
 
-  // #region Apollo Lazy Query
-
-  const [fetchFlightsQuery] = useLazyQuery(FlightsV2, {
-    client,
-    fetchPolicy: "network-only",
-    onCompleted: (data: { flightsv2: FlightsV2_Type[] }) => {
-      if (data?.flightsv2) {
-        flightsRef.current = data.flightsv2;
-        updateAircraftLayer(data.flightsv2);
-      }
-    },
-  });
-
-  /** Fetches flights for a given session */
-  const fetchFlights = useCallback(
-    (session: string) => {
-      fetchFlightsQuery({ variables: { input: { session } } });
-    },
-    [fetchFlightsQuery]
-  );
-
-  // #endregion
-
-  // #region Map Updates
+  // #region Drawing
 
   /** Updates aircraft layer with fetched flight data */
   const updateAircraftLayer = (flights: FlightsV2_Type[]) => {
@@ -269,7 +267,6 @@ const Map = () => {
 
   // #endregion
 
-  // #region Render
   return (
     <>
       <MapHeader

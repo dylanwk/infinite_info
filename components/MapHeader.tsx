@@ -14,18 +14,10 @@ import {
   SelectValue,
 } from "./ui/select";
 import { useCallback, useState } from "react";
-import { Loader } from "lucide-react";
+import { Loader2 } from "lucide-react";
+import { Session } from "@/lib/types";
 
-// Define type for session data
-interface SessionType {
-  maxUsers: number;
-  worldType: number;
-  userCount: number;
-  type: number;
-  name: string;
-  minimumGradeLevel: number;
-  id: string;
-}
+
 
 interface MapHeaderProps {
   selectedSession: string;
@@ -36,12 +28,12 @@ export const MapHeader: React.FC<MapHeaderProps> = ({
   selectedSession,
   onSessionChange,
 }) => {
-  const [sessions, setSessions] = useState<SessionType[]>([]);
+  const [sessions, setSessions] = useState<Session[]>([]);
 
   // Query hook for fetching sessions
   const { loading, error } = useQuery(GET_SESSIONS, {
     client,
-    onCompleted: (data: { sessionsv2: SessionType[] }) => {
+    onCompleted: (data: { sessionsv2: Session[] }) => {
       if (data?.sessionsv2) {
         setSessions(data.sessionsv2);
       }
@@ -73,7 +65,7 @@ export const MapHeader: React.FC<MapHeaderProps> = ({
           {loading ? (
             <Select>
               <SelectTrigger className="w-[180px] bg-transparent backdrop-blur-lg backdrop-filter">
-                <Loader /> loading...
+                <Loader2 /> 
               </SelectTrigger>
             </Select>
           ) : (

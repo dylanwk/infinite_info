@@ -7,9 +7,9 @@ import mapboxgl, {
   MapMouseEvent,
 } from "mapbox-gl";
 import "mapbox-gl/dist/mapbox-gl.css";
-import { FlightsV2_Type } from "@/lib/types";
+import { Flights, GQL_Track_Type, Track } from "@/lib/types";
 import { useLazyQuery } from "@apollo/client";
-import { FlightsV2 } from "@/lib/query";
+import { GET_FLIGHTS, GET_FLIGHTPATH } from "@/lib/query";
 import client from "@/lib/apolloClient";
 import { FlightDrawer } from "./FlightDrawer";
 import {
@@ -29,19 +29,27 @@ import {
 } from "./ui/dialog";
 import { Button } from "./ui/button";
 import { MapHeader } from "./MapHeader";
+import simplify from "simplify-js";
+import {
+  colourForAltitude,
+  crossesAntiMeridian,
+  feetToMetres,
+} from "@/lib/utils";
 
 const Map = () => {
-  
   // #region State and Refs
 
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<mapboxgl.Map | null>(null);
   const styleLoadedRef = useRef<boolean>(false);
   const aircraftDataSourceRef = useRef<GeoJSONSource | null>(null);
-  const flightsRef = useRef<FlightsV2_Type[]>([]);
+  const flightsRef = useRef<Flights[]>([]);
 
   const [drawerExpanded, setDrawerExpanded] = useState(false);
   const [selectedFlight, setSelectedFlight] = useState<string | null>(null);
+
+  const flightPathRef = useRef<Track[] | null>(null);
+  const [flightPath, setFlightPath] = useState<Track[] | null>(null);
 
   const timeoutModalState = useRef(false);
   const [timeoutModal, setTimeoutModal] = useState(false);
@@ -50,13 +58,40 @@ const Map = () => {
   const [selectedSession, setSelectedSession] = useState<string>("");
   const selectedSessionRef = useRef(selectedSession);
 
-  const [fetchFlights] = useLazyQuery(FlightsV2, {
+  const [fetchFlights] = useLazyQuery(GET_FLIGHTS, {
     client,
     fetchPolicy: "network-only",
-    onCompleted: (data: { flightsv2: FlightsV2_Type[] }) => {
+    onCompleted: (data: { flightsv2: Flights[] }) => {
       if (data?.flightsv2) {
         flightsRef.current = data.flightsv2;
         updateAircraftLayer(data.flightsv2);
+      }
+    },
+  });
+
+  const [fetchFlightPath] = useLazyQuery(GET_FLIGHTPATH, {
+    client,
+    onCompleted: (data: { flightv2: { track: GQL_Track_Type[] } }) => {
+      if (data?.flightv2) {
+        // must hard convert type to change attribute names. ex: b -> longitude
+        const convertAttributeNames = (track: GQL_Track_Type[]): Track[] => {
+          return track.map((item) => ({
+            altitude: item.a,
+            latitude: item.b,
+            longitude: item.c,
+            heading: item.h,
+            nearestAirport: item.i,
+            reportedTime: item.r,
+            speed: item.s,
+            verticalSpeed: item.v,
+            aircraftState: item.z,
+          }));
+        };
+
+        const convertedFlightPath = convertAttributeNames(data.flightv2.track);
+
+        flightPathRef.current = convertedFlightPath;
+        setFlightPath(convertedFlightPath);
       }
     },
   });
@@ -69,6 +104,7 @@ const Map = () => {
   const handleDrawerClose = () => {
     setDrawerExpanded(false);
     setSelectedFlight(null);
+    setFlightPath(null);
   };
 
   /** Handles opening of flight drawer */
@@ -84,6 +120,18 @@ const Map = () => {
     mapRef.current!.getCanvas().style.cursor = "";
   };
 
+  useEffect(() => {
+    if (!selectedFlight || !flightPath) {
+      // clear the flight path if no flight or flight path is selected
+      addFlightPositions([]);
+      if (mapRef.current?.getLayer("flight-route")) {
+        mapRef.current?.removeLayer("flight-route");
+        mapRef.current?.removeSource("flight-route");
+      }
+    }
+    addFlightPositions(flightPath || []);
+  }, [flightPath, selectedFlight]);
+
   const handleAircraftClick = useCallback(
     (
       e: MapMouseEvent & {
@@ -92,14 +140,20 @@ const Map = () => {
     ) => {
       const flightId = e.features?.[0]?.properties?.id as string | undefined;
       if (flightId) setSelectedFlight(flightId);
+      fetchFlightPath({
+        variables: {
+          input: { id: flightId, session: selectedSessionRef.current },
+        },
+      });
       trackUserAction();
     },
-    []
+    [fetchFlightPath]
   );
 
   /** Handles clicking on the map (deselects aircraft) */
   const handleMapClick = useCallback(() => {
     setSelectedFlight(null);
+    flightPathRef.current = null;
     trackUserAction();
   }, []);
 
@@ -208,7 +262,7 @@ const Map = () => {
   // #region Drawing
 
   /** Updates aircraft layer with fetched flight data */
-  const updateAircraftLayer = (flights: FlightsV2_Type[]) => {
+  const updateAircraftLayer = (flights: Flights[]) => {
     if (!mapRef.current || !styleLoadedRef.current) return;
 
     const geoJsonData: FeatureCollection = {
@@ -258,6 +312,110 @@ const Map = () => {
       }
     } catch (error) {
       console.error("Error updating aircraft layer:", error);
+    }
+  };
+
+  /* This entire function was made by Cameron Carmichael Alonso, the creator of liveflight.app */
+  const addFlightPositions = (positions: Track[]) => {
+    if (mapRef.current == null) return;
+
+    const existingRouteLine = mapRef.current.getSource(
+      "flight-route"
+    ) as GeoJSONSource;
+
+    let coordinates: [number, number][] = [];
+    if (positions.length > 0) {
+      coordinates.push([positions[0].longitude!, positions[0].latitude!]);
+    }
+    let hasCrossedMeridian = false;
+    for (let i = 0; i < positions.length - 1; i++) {
+      const currentCoords = positions[i];
+      const nextCoords = positions[i + 1];
+
+      const startLng = currentCoords.longitude!;
+      const endLng = nextCoords.longitude!;
+
+      if (
+        crossesAntiMeridian([
+          [nextCoords.longitude || 0, nextCoords.latitude || 0],
+          [currentCoords.longitude || 0, currentCoords.latitude || 0],
+        ]) ||
+        hasCrossedMeridian
+      ) {
+        if (endLng - startLng >= 180) {
+          nextCoords.longitude! -= 360;
+        } else if (endLng - startLng < 180) {
+          nextCoords.longitude! += 360;
+        }
+        hasCrossedMeridian = true;
+      }
+
+      coordinates.push([nextCoords.longitude!, nextCoords.latitude!]);
+    }
+
+    // Simplify lines
+    // This should be performed for all points above 20,000 ft - but for now, we're just setting tolerance below. It applies the same Douglas-Peucker algorithm
+    console.log("coordinates: ", coordinates);
+    const simplifiedLine = simplify(
+      coordinates.map(([x, y]) => ({ x, y })),
+      0.01,
+      true
+    );
+    coordinates = simplifiedLine.map((point) => [point.x, point.y]);
+    const simplifiedPositions = positions.filter((p) =>
+      simplifiedLine.some((l) => l.x == p.longitude && l.y == p.latitude)
+    );
+
+    const features: Feature[] = [];
+    for (let x = 0; x < coordinates.length - 1; x++) {
+      features.push({
+        type: "Feature",
+        properties: {
+          color: colourForAltitude(
+            feetToMetres(simplifiedPositions[x].altitude || 0)
+          ),
+        },
+        geometry: {
+          type: "LineString",
+          coordinates: [coordinates[x], coordinates[x + 1]]!,
+        },
+      });
+    }
+
+    const geoJsonData: GeoJSONSourceSpecification = {
+      type: "geojson",
+      data: {
+        type: "FeatureCollection",
+        features: features,
+      } as FeatureCollection<LineString, GeoJsonProperties>,
+      tolerance: 0.1,
+    };
+
+    if (!existingRouteLine) {
+      mapRef.current.addSource(
+        "flight-route",
+        geoJsonData as GeoJSONSourceSpecification
+      );
+    } else {
+      (existingRouteLine as GeoJSONSource).setData(
+        geoJsonData!.data as FeatureCollection<LineString, GeoJsonProperties>
+      );
+    }
+
+    if (!mapRef.current.getLayer("flight-route")) {
+      mapRef.current.addLayer({
+        id: "flight-route",
+        type: "line",
+        source: "flight-route",
+        layout: {
+          "line-join": "round",
+          "line-cap": "round",
+        },
+        paint: {
+          "line-color": ["get", "color"],
+          "line-width": 2,
+        },
+      });
     }
   };
 

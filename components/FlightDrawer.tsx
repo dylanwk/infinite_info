@@ -15,8 +15,8 @@ import { Loader2, Map, ChartNetwork } from "lucide-react";
 
 import { useLazyQuery } from "@apollo/client";
 import client from "@/lib/apolloClient";
-import { GET_FLIGHTV2, SIMPLE_FLIGHT_INFO } from "@/lib/query";
-import { FlightV2Type, SimpleFlightInfo } from "@/lib/types";
+import { GET_FLIGHT } from "@/lib/query";
+import { Flight } from "@/lib/types";
 
 import { useEffect, useState } from "react";
 
@@ -36,15 +36,15 @@ export function FlightDrawer({
   handleClose,
   handleOpen,
 }: FlightDrawerProps) {
-  const [flight, setFlight] = useState<FlightV2Type | null>(null);
+  const [flight, setFlight] = useState<Flight | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
 
-  const [getFlightInfo, { loading, error }] = useLazyQuery(GET_FLIGHTV2, {
+  const [getFlightInfo, { loading, error }] = useLazyQuery(GET_FLIGHT, {
     client,
     onCompleted: (data) => {
-      console.log(data)
+      console.log(data);
       if (data?.flightv2) {
-        const flightData: FlightV2Type = {
+        const flightData: Flight = {
           latitude: parseFloat(data.flightv2.latitude),
           longitude: parseFloat(data.flightv2.longitude),
           speed: parseFloat(data.flightv2.speed),
@@ -58,6 +58,7 @@ export function FlightDrawer({
           heading: parseFloat(data.flightv2.heading),
           org: data.flightv2.org,
           livery: data.flightv2.livery,
+          track: data.flightv2.track,
         };
         setFlight(flightData);
         handleOpen();
@@ -69,7 +70,9 @@ export function FlightDrawer({
   useEffect(() => {
     if (flightId) {
       setDrawerOpen(true);
-      getFlightInfo({ variables: { input: { id: flightId, session: "9bdfef34-f03b-4413-b8fa-c29949bb18f8"  } } });
+      getFlightInfo({
+        variables: { input: { id: flightId, session: currentSession } },
+      });
     } else {
       setDrawerOpen(false);
     }
@@ -176,9 +179,7 @@ export function FlightDrawer({
                         </div>
                         <div>
                           <p className="text-sm text-gray-500">Flight ID</p>
-                          <p className="font-medium truncate">
-                            {flight.id}
-                          </p>
+                          <p className="font-medium truncate">{flight.id}</p>
                         </div>
                       </div>
                     </CardContent>
@@ -216,8 +217,7 @@ export function FlightDrawer({
                         </div>
                         <div>
                           <p className="text-sm text-gray-500">Landing ETA</p>
-                          <p className="font-medium">
-                          </p>
+                          <p className="font-medium"></p>
                         </div>
                         <div>
                           <p className="text-sm text-gray-500">Username</p>

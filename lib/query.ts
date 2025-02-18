@@ -1,32 +1,59 @@
 import { gql } from "@apollo/client";
 
 
-// variables = {server: string, max: int}
-// purpose: get flights specifically to add to map
-export const GET_FLIGHTS = gql`
-query FlightsTest($server: Servers!, $max: Int) {
-  flights(server: $server, max: $max) {
-    aircraft
-    altitude
-    callsign
-    latitude
-    longitude
-    flightId
-    heading
-    speed
+// variables = none
+export const GET_SESSIONS = gql`
+query GET_SESSIONS {
+  sessionsv2 {
+    maxUsers
+    worldType
+    userCount
+    type
+    name
+    minimumGradeLevel
+    id
   }
-}
-`
+}`
 
-export const SIMPLE_FLIGHT_INFO = gql`
-  query SimplePlaneInfo($server: Servers!, $flightId: String!) {
-  flight(server: $server, flightId: $flightId) {
+// variables = session: string (sessionId)
+export const GET_FLIGHTS = gql`
+query Flightsv2($input: FlightsV2Input!) {
+  flightsv2(input: $input) {
+    id
+    latitude
+    longitude
+    heading
+  }
+}`
+
+
+// variables = session: string (sessionId) id: string (flightId)
+export const GET_FLIGHTPATH = gql`
+  query Flightv2($input: FlightV2Input!) {
+  flightv2(input: $input) {
+    track {
+      a
+      b
+      c
+      h
+      i
+      r
+      s
+      v
+      z
+    }
+  }
+}`
+
+// variables = session: string (sessionId) id: string (flightId)
+export const GET_FLIGHT = gql`
+  query Flightv2($input: FlightV2Input!) {
+  flightv2(input: $input) {
     latitude
     longitude
     speed
-    flightId
+    id
     userId
-    landingETA
     altitude
     callsign
     aircraft
@@ -35,42 +62,20 @@ export const SIMPLE_FLIGHT_INFO = gql`
     heading
     org
     livery
+    track {
+      a
+      b
+      c
+      h
+      i
+      r
+      s
+      v
+      z
+    }
   }
 }`
 
-export const GET_FLIGHT = gql`
-query TrackAndFPLV2($server: Servers!, $flightId: String!) {
-  flight(server: $server, flightId: $flightId) {
-    latitude
-    longitude
-    speed
-    flightId
-    userId
-    track {
-      date
-      latitude
-      longitude
-      altitude
-      groundSpeed
-      verticalSpeed
-      track
-    }
-    takeoffTimes {
-      altitude
-      date
-      latitude
-      longitude
-    }
-    landingTimes {
-      altitude
-      date
-      latitude
-      longitude
-    }
-  
-}
-}
-`;
 
 export const GET_AIRPORTS = gql`
 query ExampleQuery($input: AirportsV2Input!) {

@@ -61,16 +61,16 @@ export const MapHeader: React.FC<MapHeaderProps> = ({
   return (
     <div className="absolute z-10 mt-2 w-full bg-transparent">
       <Container>
-        <div className="flex flex-row items-center justify-between gap-3 md:gap-0">
+        <div className="flex flex-row items-center justify-between">
           {loading ? (
             <Select>
-              <SelectTrigger className="w-[180px] bg-transparent backdrop-blur-lg backdrop-filter">
+              <SelectTrigger className="w-[180px] bg-gray-100">
                 <Loader2 /> 
               </SelectTrigger>
             </Select>
           ) : (
             <Select value={selectedSession} onValueChange={handleSessionChange}>
-              <SelectTrigger className="w-[180px] bg-transparent border-2 border-white  backdrop-blur-lg backdrop-filter">
+              <SelectTrigger className="w-[180px] bg-gray-50 border-none shadow-lg">
                 <SelectValue placeholder="Select a server" />
               </SelectTrigger>
               <SelectContent>

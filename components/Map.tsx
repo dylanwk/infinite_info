@@ -11,7 +11,6 @@ import { Flights, GQL_Track_Type, Track } from "@/lib/types";
 import { useLazyQuery } from "@apollo/client";
 import { GET_FLIGHTS, GET_FLIGHTPATH } from "@/lib/query";
 import client from "@/lib/apolloClient";
-import { FlightDrawer } from "./FlightDrawer";
 import {
   Feature,
   GeoJsonProperties,
@@ -35,6 +34,7 @@ import {
   crossesAntiMeridian,
   feetToMetres,
 } from "@/lib/utils";
+import PersistentDrawer from "./PersistentDrawer";
 
 const Map = () => {
   // #region State and Refs
@@ -124,11 +124,8 @@ const Map = () => {
     if (!selectedFlight || !flightPath) {
       // clear the flight path if no flight or flight path is selected
       addFlightPositions([]);
-      if (mapRef.current?.getLayer("flight-route")) {
-        mapRef.current?.removeLayer("flight-route");
-        mapRef.current?.removeSource("flight-route");
-      }
     }
+
     addFlightPositions(flightPath || []);
   }, [flightPath, selectedFlight]);
 
@@ -154,6 +151,8 @@ const Map = () => {
   const handleMapClick = useCallback(() => {
     setSelectedFlight(null);
     flightPathRef.current = null;
+    setDrawerExpanded(false);
+    setFlightPath(null);
     trackUserAction();
   }, []);
 
@@ -317,11 +316,7 @@ const Map = () => {
 
   /* This entire function was made by Cameron Carmichael Alonso, the creator of liveflight.app */
   const addFlightPositions = (positions: Track[]) => {
-    if (mapRef.current == null) return;
-
-    const existingRouteLine = mapRef.current.getSource(
-      "flight-route"
-    ) as GeoJSONSource;
+    if (mapRef.current == null || !styleLoadedRef.current) return;
 
     let coordinates: [number, number][] = [];
     if (positions.length > 0) {
@@ -355,7 +350,6 @@ const Map = () => {
 
     // Simplify lines
     // This should be performed for all points above 20,000 ft - but for now, we're just setting tolerance below. It applies the same Douglas-Peucker algorithm
-    console.log("coordinates: ", coordinates);
     const simplifiedLine = simplify(
       coordinates.map(([x, y]) => ({ x, y })),
       0.01,
@@ -391,31 +385,37 @@ const Map = () => {
       tolerance: 0.1,
     };
 
-    if (!existingRouteLine) {
-      mapRef.current.addSource(
-        "flight-route",
-        geoJsonData as GeoJSONSourceSpecification
-      );
-    } else {
-      (existingRouteLine as GeoJSONSource).setData(
-        geoJsonData!.data as FeatureCollection<LineString, GeoJsonProperties>
-      );
-    }
+    if (mapRef.current) {
+      const existingRouteLine = mapRef.current.getSource("flight-route") as
+        | GeoJSONSource
+        | undefined;
 
-    if (!mapRef.current.getLayer("flight-route")) {
-      mapRef.current.addLayer({
-        id: "flight-route",
-        type: "line",
-        source: "flight-route",
-        layout: {
-          "line-join": "round",
-          "line-cap": "round",
-        },
-        paint: {
-          "line-color": ["get", "color"],
-          "line-width": 2,
-        },
-      });
+      if (!existingRouteLine) {
+        mapRef.current.addSource(
+          "flight-route",
+          geoJsonData as GeoJSONSourceSpecification
+        );
+      } else {
+        existingRouteLine.setData(
+          geoJsonData.data as FeatureCollection<LineString, GeoJsonProperties>
+        );
+      }
+
+      if (!mapRef.current.getLayer("flight-route")) {
+        mapRef.current.addLayer({
+          id: "flight-route",
+          type: "line",
+          source: "flight-route",
+          layout: {
+            "line-join": "round",
+            "line-cap": "round",
+          },
+          paint: {
+            "line-color": ["get", "color"],
+            "line-width": 2,
+          },
+        });
+      }
     }
   };
 
@@ -459,7 +459,7 @@ const Map = () => {
         </DialogContent>
       </Dialog>
       {selectedFlight && (
-        <FlightDrawer
+        <PersistentDrawer
           handleOpen={handleDrawerOpen}
           flightId={selectedFlight}
           currentSession={selectedSession}

@@ -25,6 +25,14 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
+      <head>
+      <link
+          rel="icon"
+          href="/images/iilogo.svg"
+          type="image/svg+xml"
+          sizes="48x48"
+        />
+      </head>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >

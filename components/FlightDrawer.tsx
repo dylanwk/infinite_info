@@ -84,6 +84,7 @@ export function FlightDrawer({
       onClose={handleClose}
       onOpenChange={setDrawerOpen}
       direction="right"
+      
     >
       {loading ? (
         <div className="flex items-center justify-center h-[200px]">
@@ -96,7 +97,7 @@ export function FlightDrawer({
           </CardContent>
         </Card>
       ) : (
-        <DrawerContent className="sm:max-w-[425px] z-[100]">
+        <DrawerContent className=" fixed right-0 h-full w-1/3">
           <ScrollArea className="h-[90vh]">
             <DrawerHeader className="mt-2">
               <DrawerTitle className="text-3xl font-bold">

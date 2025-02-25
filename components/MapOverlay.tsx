@@ -13,7 +13,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "./ui/select";
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Loader2 } from "lucide-react";
 import { Session } from "@/lib/types";
 
@@ -24,26 +24,43 @@ interface MapHeaderProps {
   onSessionChange: (value: string) => void;
 }
 
-export const MapHeader: React.FC<MapHeaderProps> = ({
+export const MapOverlay: React.FC<MapHeaderProps> = ({
   selectedSession,
   onSessionChange,
 }) => {
+  
+
   const [sessions, setSessions] = useState<Session[]>([]);
+  const isMounted = useRef(false);
+
+  useEffect(() => {
+    isMounted.current = true;
+    return () => {
+      isMounted.current = false;
+    };
+  }, []);
 
   // Query hook for fetching sessions
-  const { loading, error } = useQuery(GET_SESSIONS, {
-    client,
-    onCompleted: (data: { sessionsv2: Session[] }) => {
-      if (data?.sessionsv2) {
-        setSessions(data.sessionsv2);
-      }
-    },
-  });
+  const { data, loading, error } = useQuery(GET_SESSIONS, { client });
 
-  // Memoized handler for session selection changes
+  // Effect to update state when data is received
+  useEffect(() => {
+    if (isMounted.current && data?.sessionsv2) {
+      setSessions(data.sessionsv2);
+    }
+  }, [data]);
+
+  useEffect(() => {
+    if (isMounted.current && sessions.length > 0 && selectedSession === "") {
+      onSessionChange(sessions[0].id);
+    }
+  }, [sessions, selectedSession, onSessionChange]);
+
   const handleSessionChange = useCallback(
     (value: string) => {
-      onSessionChange(value);
+      if (isMounted.current) {
+        onSessionChange(value);
+      }
     },
     [onSessionChange]
   );

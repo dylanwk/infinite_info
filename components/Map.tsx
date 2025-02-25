@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 "use client";
 
 import { useRef, useEffect, useState, useCallback } from "react";
@@ -28,13 +29,15 @@ import {
   DialogTitle,
 } from "./ui/dialog";
 import { Button } from "./ui/button";
-import { MapHeader } from "./MapHeader";
+import { MapOverlay } from "./MapOverlay";
 import simplify from "simplify-js";
 import {
   colourForAltitude,
   crossesAntiMeridian,
   feetToMetres,
 } from "@/lib/utils";
+import Persistent from "./Persistent";
+
 
 const Map = () => {
   // #region State and Refs
@@ -122,11 +125,13 @@ const Map = () => {
 
   useEffect(() => {
     if (!selectedFlight || !flightPath) {
+      if (!mapRef.current || !mapRef.current.isStyleLoaded()) return;
+
       // clear the flight path if no flight or flight path is selected
       addFlightPositions([]);
-      if (mapRef.current?.getLayer("flight-route")) {
+
+      if (mapRef.current.getLayer("flight-route")) {
         mapRef.current?.removeLayer("flight-route");
-        mapRef.current?.removeSource("flight-route");
       }
     }
     addFlightPositions(flightPath || []);
@@ -140,11 +145,13 @@ const Map = () => {
     ) => {
       const flightId = e.features?.[0]?.properties?.id as string | undefined;
       if (flightId) setSelectedFlight(flightId);
+
       fetchFlightPath({
         variables: {
           input: { id: flightId, session: selectedSessionRef.current },
         },
       });
+
       trackUserAction();
     },
     [fetchFlightPath]
@@ -179,6 +186,7 @@ const Map = () => {
         container: mapContainerRef.current,
         style: "mapbox://styles/ethaaan/cldfgnal3000201nyv4534tvx/draft",
         zoom: 1.8,
+        center: [0, 0],
       });
 
       // Event listeners
@@ -212,7 +220,7 @@ const Map = () => {
     return () => {
       mapRef.current?.remove();
     };
-  }, [fetchFlights, handleAircraftClick, handleMapClick]);
+  }, []);
 
   // #endregion
 
@@ -317,11 +325,16 @@ const Map = () => {
 
   /* This entire function was made by Cameron Carmichael Alonso, the creator of liveflight.app */
   const addFlightPositions = (positions: Track[]) => {
-    if (mapRef.current == null) return;
+    if (!mapRef.current || !mapRef.current.isStyleLoaded()) return;
 
-    const existingRouteLine = mapRef.current.getSource(
-      "flight-route"
-    ) as GeoJSONSource;
+    const existingRouteLine = mapRef.current.getSource("flight-route");
+    /*if (!existingRouteLine) {
+      console.warn("Source 'flight-route' not found, adding it now.");
+      mapRef.current.addSource("flight-route", {
+        type: "geojson",
+        data: { type: "FeatureCollection", features: [] },
+      });
+    }*/
 
     let coordinates: [number, number][] = [];
     if (positions.length > 0) {
@@ -355,7 +368,6 @@ const Map = () => {
 
     // Simplify lines
     // This should be performed for all points above 20,000 ft - but for now, we're just setting tolerance below. It applies the same Douglas-Peucker algorithm
-    console.log("coordinates: ", coordinates);
     const simplifiedLine = simplify(
       coordinates.map(([x, y]) => ({ x, y })),
       0.01,
@@ -427,16 +439,14 @@ const Map = () => {
 
   return (
     <>
-      <MapHeader
+      <MapOverlay
         selectedSession={selectedSession}
         onSessionChange={(e) => setSelectedSession(e)}
       />
       <div
         id="map-container"
         ref={mapContainerRef}
-        className={`h-[100vh] transition duration-1000 ${
-          drawerExpanded ? "w-3/4" : "w-full"
-        }`}
+        className="h-full w-full absolute top-0 left-0"
       />
       <Dialog open={timeoutModal}>
         <DialogContent className="max-w-[425px] mx-auto [&>button]:hidden">
@@ -458,14 +468,7 @@ const Map = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-      {selectedFlight && (
-        <FlightDrawer
-          handleOpen={handleDrawerOpen}
-          flightId={selectedFlight}
-          currentSession={selectedSession}
-          handleClose={handleDrawerClose}
-        />
-      )}
+      {selectedFlight && <></>}
     </>
   );
   // #endregion

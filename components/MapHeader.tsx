@@ -13,7 +13,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "./ui/select";
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Loader2 } from "lucide-react";
 import { Session } from "@/lib/types";
 
@@ -39,6 +39,13 @@ export const MapHeader: React.FC<MapHeaderProps> = ({
       }
     },
   });
+
+  useEffect(() => {
+    if (sessions.length > 0 && !selectedSession) {
+      onSessionChange(sessions[0].id);
+    }
+  }
+  , [sessions, selectedSession, onSessionChange]);
 
   // Memoized handler for session selection changes
   const handleSessionChange = useCallback(

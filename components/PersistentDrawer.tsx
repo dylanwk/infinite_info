@@ -12,6 +12,10 @@ import client from "@/lib/apolloClient";
 import { GET_FLIGHT } from "@/lib/query";
 import { Flight } from "@/lib/types";
 import { useEffect, useState } from "react";
+import FPLContent from "./FPLContent";
+import { GraphContent } from "./GraphContent";
+
+type DrawerView = "default" | "graph" | "flight-plan";
 
 interface PersistentProps {
   flightId: string | null;
@@ -28,6 +32,7 @@ export default function PersistentDrawer({
 }: PersistentProps) {
   const [flight, setFlight] = useState<Flight | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [currentView, setCurrentView] = useState<DrawerView>("default");
   //const isMobile = useMediaQuery("(max-width: 768px)");
 
   const [getFlightInfo, { loading, error }] = useLazyQuery(GET_FLIGHT, {
@@ -51,11 +56,18 @@ export default function PersistentDrawer({
           track: data.flightv2.track,
         };
         setFlight(flightData);
+        console.log(flightData);
         handleOpen();
       }
     },
   });
 
+  // Reset view when flight changes
+  useEffect(() => {
+    setCurrentView("default");
+  }, [flight]);
+
+  // Fetch flight data when flightId or session changes
   useEffect(() => {
     if (flightId) {
       setDrawerOpen(true);
@@ -67,15 +79,29 @@ export default function PersistentDrawer({
     }
   }, [flightId, currentSession, getFlightInfo]);
 
+  const renderContent = () => {
+    if (!flight) return null;
+
+    switch (currentView) {
+      case "graph":
+        return <GraphContent tracks={flight.track} callsign={flight.callsign || "Anonymous"} />;
+      case "flight-plan":
+        return <FPLContent />;
+      default:
+        return <DefaultContent flight={flight} />;
+    }
+  };
+
   return (
     <Drawer
       sx={{
         flexShrink: 0,
         "& .MuiDrawer-paper": {
-          width: { xs: "90%", sm: 400 },
+          width: { xs: "90%", sm: 450 },
           boxSizing: "border-box",
           overflow: "hidden",
-          borderRadius: "16px", 
+          borderRadius: "16px", // rounded corners
+          boxShadow: "0px 4px 12px rgba(0, 0, 0, 0.1)", // shadow
         },
       }}
       variant="persistent"
@@ -144,42 +170,25 @@ export default function PersistentDrawer({
               </div>
 
               <div className="flex flex-col md:flex-row gap-2">
-                <Button className="flex-1" variant="default">
+                <Button
+                  onClick={() => setCurrentView("flight-plan")}
+                  className="flex-1"
+                  variant="default"
+                >
                   <Map className="mr-2 h-4 w-4" />
                   Flight Plan
                 </Button>
-                <Button className="flex-1" variant="default">
+                <Button
+                  onClick={() => setCurrentView("graph")}
+                  className="flex-1"
+                  variant="default"
+                >
                   <ChartNetwork className="mr-2 h-4 w-4" />
                   Graphs
                 </Button>
               </div>
 
-              <Card>
-                <CardContent className="p-4 space-y-4">
-                  <DetailSection title="Flight Information">
-                    <DetailItem label="Callsign" value={flight.callsign} />
-                    <DetailItem label="Aircraft" value={flight.aircraft} />
-                    <DetailItem label="Livery" value={flight.livery} />
-                    <DetailItem label="Flight ID" value={flight.id} truncate />
-                  </DetailSection>
-
-                  <DetailSection title="Additional Details">
-                    <DetailItem
-                      label="User ID"
-                      value={flight.userId}
-                      truncate
-                    />
-                    <DetailItem
-                      label="Username"
-                      value={flight.username || "N/A"}
-                    />
-                    <DetailItem
-                      label="Organization"
-                      value={flight.org || "N/A"}
-                    />
-                  </DetailSection>
-                </CardContent>
-              </Card>
+              {renderContent()}
             </>
           ) : (
             <Card className="bg-yellow-50">
@@ -201,6 +210,27 @@ export default function PersistentDrawer({
         </Button>
       </div>
     </Drawer>
+  );
+}
+
+function DefaultContent({ flight }: { flight: Flight }) {
+  return (
+    <Card>
+      <CardContent className="p-4 space-y-4">
+        <DetailSection title="Flight Information">
+          <DetailItem label="Callsign" value={flight.callsign} />
+          <DetailItem label="Aircraft" value={flight.aircraft} />
+          <DetailItem label="Livery" value={flight.livery} />
+          <DetailItem label="Flight ID" value={flight.id} truncate />
+        </DetailSection>
+
+        <DetailSection title="Additional Details">
+          <DetailItem label="User ID" value={flight.userId} truncate />
+          <DetailItem label="Username" value={flight.username || "N/A"} />
+          <DetailItem label="Organization" value={flight.org || "N/A"} />
+        </DetailSection>
+      </CardContent>
+    </Card>
   );
 }
 

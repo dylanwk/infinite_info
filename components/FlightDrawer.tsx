@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 "use client";
 
 import {
@@ -22,6 +23,7 @@ import { useEffect, useState } from "react";
 
 import PermIdentityIcon from "@mui/icons-material/PermIdentity";
 import FlightIcon from "@mui/icons-material/Flight";
+import { altitudeTrack } from "./GraphContent";
 
 interface FlightDrawerProps {
   flightId: string | null;
@@ -37,6 +39,7 @@ export function FlightDrawer({
   handleOpen,
 }: FlightDrawerProps) {
   const [flight, setFlight] = useState<Flight | null>(null);
+  
   const [drawerOpen, setDrawerOpen] = useState(false);
 
   const [getFlightInfo, { loading, error }] = useLazyQuery(GET_FLIGHT, {

@@ -12,9 +12,8 @@ const Home = () => {
             Infinite Info <br /> Now on the Web
           </h1>
           <p className="mb-8 max-w-xl text-muted-foreground lg:text-xl">
-            Lorem ipsum dolor sit amet consectetur adipisicing elit. Elig
-            doloremque mollitia fugiat omnis! Porro facilis quo animi
-            consequatur. Explicabo.
+            Infinite Info&apos;s IOS Infinite Flight tracking app is now available on the web.
+            Track your flights, view your stats, and much more.
           </p>
           <div className="flex w-full flex-col justify-center gap-2 sm:flex-row lg:justify-start">
             <Link href={"/map"}>

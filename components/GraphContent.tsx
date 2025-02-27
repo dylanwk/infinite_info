@@ -43,18 +43,22 @@ export type speedTrack = {
   reportedTime: string;
 };
 
+export type vsTrack = {
+  vs: number;
+  reportedTime: string;
+};
+
 interface GraphContentProps {
   tracks: GQL_Track_Type[];
   callsign: string;
 }
 
 export function GraphContent({ tracks, callsign }: GraphContentProps) {
-
   const formatReportedTime = (dateString: string) => {
     const date = new Date(dateString);
     const hours = date.getUTCHours().toString().padStart(2, "0");
     const minutes = date.getUTCMinutes().toString().padStart(2, "0");
-    return `${hours}hr${minutes}Z`;
+    return `${hours}hr:${minutes}Z`;
   };
 
   const altitudeData: altitudeTrack[] = tracks.map((track) => ({
@@ -64,6 +68,11 @@ export function GraphContent({ tracks, callsign }: GraphContentProps) {
 
   const speedData: speedTrack[] = tracks.map((track) => ({
     speed: track.s,
+    reportedTime: formatReportedTime(track.r),
+  }));
+
+  const vsData: vsTrack[] = tracks.map((track) => ({
+    vs: track.v,
     reportedTime: formatReportedTime(track.r),
   }));
 
@@ -105,7 +114,6 @@ export function GraphContent({ tracks, callsign }: GraphContentProps) {
                 dataKey="altitude"
                 type="monotone"
                 stroke="#000000"
-                //stroke="var(--color-desktop)"
                 strokeWidth={3}
                 dot={false}
               />
@@ -150,7 +158,50 @@ export function GraphContent({ tracks, callsign }: GraphContentProps) {
                 dataKey="speed"
                 type="monotone"
                 stroke="#000000"
-                //stroke="var(--color-desktop)"
+                strokeWidth={3}
+                dot={false}
+              />
+            </LineChart>
+          </ChartContainer>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Vertical Speed</CardTitle>
+          <CardDescription>{callsign}</CardDescription>
+        </CardHeader>
+        <CardContent className="pl-3">
+          <ChartContainer config={chartConfig}>
+            <LineChart
+              accessibilityLayer
+              data={vsData}
+              margin={{
+                right: 8,
+                left: 0,
+                top: 12,
+              }}
+            >
+              <CartesianGrid vertical={false} />
+              <XAxis
+                dataKey="reportedTime"
+                tickLine={false}
+                axisLine={false}
+                tickMargin={8}
+                interval="equidistantPreserveStart"
+                tickFormatter={(value) => value.slice(0, 8)}
+              />
+              <YAxis
+                tickLine={false}
+                axisLine={false}
+                tickMargin={8}
+                domain={["auto", "auto"]}
+              />
+              <Tooltip cursor={false} content={<ChartTooltipContent />} />
+              <Line
+                dataKey="vs"
+                type="monotone"
+                stroke="#000000"
                 strokeWidth={3}
                 dot={false}
               />

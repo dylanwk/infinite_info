@@ -14,6 +14,7 @@ import { Flight } from "@/lib/types";
 import { useEffect, useState } from "react";
 import FPLContent from "./FPLContent";
 import { GraphContent } from "./GraphContent";
+import { FlightProgressBar } from "./FlightProgressBar";
 
 type DrawerView = "default" | "graph" | "flight-plan";
 
@@ -84,7 +85,12 @@ export default function PersistentDrawer({
 
     switch (currentView) {
       case "graph":
-        return <GraphContent tracks={flight.track} callsign={flight.callsign || "Anonymous"} />;
+        return (
+          <GraphContent
+            tracks={flight.track}
+            callsign={flight.callsign || "Anonymous"}
+          />
+        );
       case "flight-plan":
         return <FPLContent />;
       default:
@@ -216,6 +222,7 @@ export default function PersistentDrawer({
 function DefaultContent({ flight }: { flight: Flight }) {
   return (
     <Card>
+      {/* Unfinished: <FlightProgressBar track={flight.track} callsign={""} /> */}
       <CardContent className="p-4 space-y-4">
         <DetailSection title="Flight Information">
           <DetailItem label="Callsign" value={flight.callsign} />

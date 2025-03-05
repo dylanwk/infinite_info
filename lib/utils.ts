@@ -1,10 +1,31 @@
 import { clsx, type ClassValue } from "clsx"
 import { twMerge } from "tailwind-merge"
+import { FlightPlan, FlightPlanItem } from "./types";
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
 }
 
+export const processFlightPlanData = (data: any): FlightPlan | null => {
+  if (!data?.flightplan) return null;
+
+  const mapFlightPlanItem = (item: any): FlightPlanItem => ({
+    identifier: item.identifier,
+    name: item.name,
+    type: item.type,
+    location: {
+      altitude: item.location.altitude,
+      latitude: item.location.latitude,
+      longitude: item.location.longitude,
+    },
+    children: item.children ? item.children.map(mapFlightPlanItem) : null,
+  });
+
+  return {
+    code: data.flightplan.code,
+    flightPlanItems: data.flightplan.flightPlan.flightPlanItems.map(mapFlightPlanItem),
+  };
+};
 
 
 /* these functions came from Cameron Carmichael Alonso */
@@ -51,7 +72,7 @@ export function colourForAltitude(altitude: number) {
 
 export function crossesAntiMeridian(positions: [number, number][]) {
   return (
-      Math.sign(positions[0][0]) * Math.sign(positions[1][0]) < 0 &&
-      Math.abs(parseInt(positions[0][0].toFixed(0))) > 1
+    Math.sign(positions[0][0]) * Math.sign(positions[1][0]) < 0 &&
+    Math.abs(parseInt(positions[0][0].toFixed(0))) > 1
   );
 }

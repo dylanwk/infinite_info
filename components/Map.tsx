@@ -35,6 +35,8 @@ import {
   feetToMetres,
 } from "@/lib/utils";
 import PersistentDrawer from "./PersistentDrawer";
+import MobileDrawer from "./MobileDrawer";
+import useMediaQuery from "@mui/material/useMediaQuery";
 
 const INACTIVITY_TIMEOUT_MS = 300000; // 5 minutes
 const REFRESH_INTERVAL_MS = 60000; // 1 minute
@@ -62,6 +64,8 @@ const Map = () => {
 
   const [selectedSession, setSelectedSession] = useState<string>("");
   const selectedSessionRef = useRef(selectedSession);
+
+  const isMobile = useMediaQuery("(max-width: 768px)");
 
   const [fetchFlights] = useLazyQuery(GET_FLIGHTS, {
     client,
@@ -485,12 +489,23 @@ const Map = () => {
         </DialogContent>
       </Dialog>
       {selectedFlight && (
-        <PersistentDrawer
-          handleOpen={handleDrawerOpen}
-          flightId={selectedFlight}
-          currentSession={selectedSession}
-          handleClose={handleDrawerClose}
-        />
+        <>
+          {isMobile ? (
+            <MobileDrawer
+              handleOpen={handleDrawerOpen}
+              flightId={selectedFlight}
+              currentSession={selectedSession}
+              handleClose={handleDrawerClose}
+            />
+          ) : (
+            <PersistentDrawer
+              handleOpen={handleDrawerOpen}
+              flightId={selectedFlight}
+              currentSession={selectedSession}
+              handleClose={handleDrawerClose}
+            />
+          )}
+        </>
       )}
     </>
   );

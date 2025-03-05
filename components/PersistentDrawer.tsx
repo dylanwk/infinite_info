@@ -2,21 +2,20 @@
 
 import Drawer from "@mui/material/Drawer";
 import { Loader2, Map, ChartNetwork } from "lucide-react";
-import PermIdentityIcon from "@mui/icons-material/PermIdentity";
-import FlightIcon from "@mui/icons-material/Flight";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useLazyQuery } from "@apollo/client";
 import client from "@/lib/apolloClient";
 import { GET_FLIGHT } from "@/lib/query";
-import { Flight } from "@/lib/types";
-import { useEffect, useState } from "react";
-import FPLContent from "./FPLContent";
+import { Flight, GQL_Track_Type } from "@/lib/types";
+import { useEffect, useState, useCallback } from "react";
+import { FPLContent } from "./FPLContent";
 import { GraphContent } from "./GraphContent";
-import { FlightProgressBar } from "./FlightProgressBar";
+import DrawerHeader from "./DrawerHeader";
+import DefaultContent from "./DefaultContent";
 
-type DrawerView = "default" | "graph" | "flight-plan";
+export type DrawerView = "default" | "graph" | "flight-plan";
 
 interface PersistentProps {
   flightId: string | null;
@@ -32,9 +31,9 @@ export default function PersistentDrawer({
   handleOpen,
 }: PersistentProps) {
   const [flight, setFlight] = useState<Flight | null>(null);
+  const [track, setTrack] = useState<GQL_Track_Type[]>([]);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [currentView, setCurrentView] = useState<DrawerView>("default");
-  //const isMobile = useMediaQuery("(max-width: 768px)");
 
   const [getFlightInfo, { loading, error }] = useLazyQuery(GET_FLIGHT, {
     client,
@@ -54,8 +53,10 @@ export default function PersistentDrawer({
           heading: parseFloat(data.flightv2.heading),
           org: data.flightv2.org,
           livery: data.flightv2.livery,
-          track: data.flightv2.track,
+          landingTimes: data.flightv2.landingTimes,
+          takeoffTimes: data.flightv2.takeoffTimes,
         };
+        setTrack(data.flightv2.track);
         setFlight(flightData);
         console.log(flightData);
         handleOpen();
@@ -67,6 +68,15 @@ export default function PersistentDrawer({
   useEffect(() => {
     setCurrentView("default");
   }, [flight]);
+
+  const handleClick = (value: DrawerView) => {
+    if (currentView === value) {
+      setCurrentView("default");
+    } else {
+      setCurrentView(value);
+    }
+    return;
+  };
 
   // Fetch flight data when flightId or session changes
   useEffect(() => {
@@ -87,14 +97,16 @@ export default function PersistentDrawer({
       case "graph":
         return (
           <GraphContent
-            tracks={flight.track}
+            tracks={track}
             callsign={flight.callsign || "Anonymous"}
           />
         );
       case "flight-plan":
-        return <FPLContent />;
+        return <FPLContent id={flight.id} />;
       default:
-        return <DefaultContent flight={flight} />;
+        return (
+          <DefaultContent currentSession={currentSession} flight={flight} />
+        );
     }
   };
 
@@ -134,65 +146,15 @@ export default function PersistentDrawer({
             </Card>
           ) : flight ? (
             <>
-              <div className="flex flex-col gap-1 -mb-4">
-                <div className="flex-row flex font-light text-gray-900 gap-1.5">
-                  <PermIdentityIcon fontSize="small" />
-                  <div className="-mt-0.5 -ml-0.5">
-                    {flight.username ? flight.username : "Anonymous"}
-                  </div>
-                </div>
-                <div className="flex-row flex font-light text-gray-900 gap-1.5">
-                  <FlightIcon fontSize="small" />
-                  <div className="-mt-0.5 -ml-0.5">
-                    {flight.aircraft ? flight.aircraft : "Unknown"}
-                  </div>
-                </div>
-              </div>
-              <div className="flex flex-row justify-evenly rounded-xl gap-2 bg-gray-100 p-4">
-                <div className="flex flex-col items-center">
-                  <p className="text-xs text-neutral-700 font-light tracking-tight">
-                    Alt. (MSL)
-                  </p>
-                  <div>{Math.floor(flight.altitude)} ft</div>
-                </div>
-                <div className="flex flex-col items-center">
-                  <p className="text-xs text-neutral-700 font-light tracking-tight">
-                    Heading (T)
-                  </p>
-                  <div>{flight.heading.toFixed(1)}°</div>
-                </div>
-                <div className="flex flex-col items-center">
-                  <p className="text-xs text-neutral-700 font-light tracking-tight">
-                    VS
-                  </p>
-                  <div>{Math.floor(flight.verticalSpeed)} fpm</div>
-                </div>
-                <div className="flex flex-col items-center">
-                  <p className="text-xs text-neutral-700 font-light tracking-tight">
-                    Spd. (GS)
-                  </p>
-                  <div>{Math.floor(flight.speed)} kts</div>
-                </div>
-              </div>
-
-              <div className="flex flex-col md:flex-row gap-2">
-                <Button
-                  onClick={() => setCurrentView("flight-plan")}
-                  className="flex-1"
-                  variant="default"
-                >
-                  <Map className="mr-2 h-4 w-4" />
-                  Flight Plan
-                </Button>
-                <Button
-                  onClick={() => setCurrentView("graph")}
-                  className="flex-1"
-                  variant="default"
-                >
-                  <ChartNetwork className="mr-2 h-4 w-4" />
-                  Graphs
-                </Button>
-              </div>
+              <DrawerHeader
+                username={flight.username}
+                aircraft={flight.aircraft}
+                altitude={flight.altitude}
+                heading={flight.heading}
+                speed={flight.speed}
+                vs={flight.verticalSpeed}
+                handleClick={handleClick}
+              />
 
               {renderContent()}
             </>
@@ -216,63 +178,5 @@ export default function PersistentDrawer({
         </Button>
       </div>
     </Drawer>
-  );
-}
-
-function DefaultContent({ flight }: { flight: Flight }) {
-  return (
-    <Card>
-      {/* Unfinished: <FlightProgressBar track={flight.track} callsign={""} /> */}
-      <CardContent className="p-4 space-y-4">
-        <DetailSection title="Flight Information">
-          <DetailItem label="Callsign" value={flight.callsign} />
-          <DetailItem label="Aircraft" value={flight.aircraft} />
-          <DetailItem label="Livery" value={flight.livery} />
-          <DetailItem label="Flight ID" value={flight.id} truncate />
-        </DetailSection>
-
-        <DetailSection title="Additional Details">
-          <DetailItem label="User ID" value={flight.userId} truncate />
-          <DetailItem label="Username" value={flight.username || "N/A"} />
-          <DetailItem label="Organization" value={flight.org || "N/A"} />
-        </DetailSection>
-      </CardContent>
-    </Card>
-  );
-}
-
-function DetailSection({
-  title,
-  children,
-}: {
-  title: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <div className="space-y-2">
-      <h3 className="font-semibold">{title}</h3>
-      <div className="space-y-2">{children}</div>
-    </div>
-  );
-}
-
-function DetailItem({
-  label,
-  value,
-  truncate = false,
-}: {
-  label: string;
-  value: string;
-  truncate?: boolean;
-}) {
-  return (
-    <div className="flex justify-between items-center">
-      <span className="text-sm text-muted-foreground">{label}</span>
-      <span
-        className={`font-medium ${truncate ? "truncate max-w-[150px]" : ""}`}
-      >
-        {value}
-      </span>
-    </div>
   );
 }

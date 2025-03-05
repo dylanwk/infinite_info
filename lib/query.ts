@@ -62,6 +62,18 @@ export const GET_FLIGHT = gql`
     heading
     org
     livery
+    takeoffTimes {
+      a
+      b
+      c
+      r
+    }
+    landingTimes {
+      a
+      b
+      c
+      r
+    }
     track {
       a
       b
@@ -85,3 +97,34 @@ query ExampleQuery($input: AirportsV2Input!) {
   }
 }
 `;
+
+
+export const GET_FLIGHTPLAN = gql`
+query flightplan($flightplanId: String!) {
+  flightplan(id: $flightplanId) {
+    code
+    flightPlan {
+      flightPlanItems {
+        identifier
+        name
+        type
+        location {
+          altitude
+          latitude
+          longitude
+        }
+        children {
+          identifier
+          name
+          type
+          location {
+            altitude
+            latitude
+            longitude
+          }
+        }
+        
+      }
+    }
+  }
+}`

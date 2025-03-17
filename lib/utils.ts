@@ -19,6 +19,7 @@ export const processFlightPlanData = (data: any): FlightPlan | null => {
       longitude: item.location.longitude,
     },
     children: item.children ? item.children.map(mapFlightPlanItem) : null,
+    distanceFromPrevious: -1,
   });
 
   return {

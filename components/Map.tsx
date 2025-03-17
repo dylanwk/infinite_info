@@ -28,15 +28,13 @@ import {
 } from "./ui/dialog";
 import { Button } from "./ui/button";
 import { MapHeader } from "./MapHeader";
-import simplify from "simplify-js";
 import {
   colourForAltitude,
   crossesAntiMeridian,
   feetToMetres,
 } from "@/lib/utils";
-import PersistentDrawer from "./PersistentDrawer";
-import MobileDrawer from "./MobileDrawer";
 import useMediaQuery from "@mui/material/useMediaQuery";
+import DrawerProvider from "./FlightDrawer/DrawerProvider";
 
 const INACTIVITY_TIMEOUT_MS = 300000; // 5 minutes
 const REFRESH_INTERVAL_MS = 60000; // 1 minute
@@ -384,13 +382,9 @@ const Map = () => {
       coordinates.push([nextCoords.longitude!, nextCoords.latitude!]);
     }
 
-    // Simplify lines
-    // This should be performed for all points above 20,000 ft - but for now, we're just setting tolerance below. It applies the same Douglas-Peucker algorithm
-    const simplifiedLine = simplify(
-      coordinates.map(([x, y]) => ({ x, y })),
-      0.01,
-      true
-    );
+    // cancelled the simplify function, this is still needed to convert type from arr to obj
+    const simplifiedLine = coordinates.map(([x, y]) => ({ x, y }));
+
     coordinates = simplifiedLine.map((point) => [point.x, point.y]);
     const simplifiedPositions = positions.filter((p) =>
       simplifiedLine.some((l) => l.x == p.longitude && l.y == p.latitude)
@@ -490,21 +484,12 @@ const Map = () => {
       </Dialog>
       {selectedFlight && (
         <>
-          {isMobile ? (
-            <MobileDrawer
-              handleOpen={handleDrawerOpen}
-              flightId={selectedFlight}
-              currentSession={selectedSession}
-              handleClose={handleDrawerClose}
-            />
-          ) : (
-            <PersistentDrawer
-              handleOpen={handleDrawerOpen}
-              flightId={selectedFlight}
-              currentSession={selectedSession}
-              handleClose={handleDrawerClose}
-            />
-          )}
+          <DrawerProvider
+            handleOpen={handleDrawerOpen}
+            flightId={selectedFlight}
+            currentSession={selectedSession}
+            handleClose={handleDrawerClose}
+          />
         </>
       )}
     </>

@@ -1,10 +1,9 @@
-import { Flight } from "@/lib/types";
 import React from "react";
-import { Button } from "./ui/button";
+import { Button } from "../ui/button";
 import { ChartNetwork, Map } from "lucide-react";
 import PermIdentityIcon from "@mui/icons-material/PermIdentity";
 import FlightIcon from "@mui/icons-material/Flight";
-import { DrawerView } from "./PersistentDrawer";
+import { DrawerView } from "@/lib/types";
 
 interface DrawerHeaderProps {
   username: string;
@@ -13,7 +12,10 @@ interface DrawerHeaderProps {
   heading: number;
   vs: number;
   speed: number;
+  livery: string;
   handleClick: (value: DrawerView) => void;
+  currentView: DrawerView;
+  isVerified: boolean;
 }
 const DrawerHeader: React.FC<DrawerHeaderProps> = ({
   username,
@@ -22,8 +24,15 @@ const DrawerHeader: React.FC<DrawerHeaderProps> = ({
   heading,
   vs,
   speed,
+  livery,
   handleClick,
+  currentView,
+  isVerified,
 }) => {
+  if (!username || username === "") {
+    username = "Anonymous";
+  }
+
   return (
     <>
       <div className="flex flex-col gap-1 -mb-4">
@@ -33,7 +42,9 @@ const DrawerHeader: React.FC<DrawerHeaderProps> = ({
         </div>
         <div className="flex-row flex font-light text-gray-900 gap-1.5">
           <FlightIcon fontSize="small" />
-          <div className="-mt-0.5 -ml-0.5">{aircraft}</div>
+          <div className="-mt-0.5 -ml-0.5">
+            {aircraft} ({livery})
+          </div>
         </div>
       </div>
       <div className="flex flex-row justify-evenly rounded-xl gap-2 bg-gray-100 p-4">
@@ -66,7 +77,11 @@ const DrawerHeader: React.FC<DrawerHeaderProps> = ({
       <div className="flex flex-col md:flex-row gap-2">
         <Button
           onClick={() => handleClick("flight-plan")}
-          className="flex-1"
+          className={`${
+            currentView === "flight-plan" && isVerified
+              ? "bg-[hsl(191,95%,33%)]"
+              : ""
+          } flex-1`}
           variant="default"
         >
           <Map className="mr-2 h-4 w-4" />
@@ -74,7 +89,9 @@ const DrawerHeader: React.FC<DrawerHeaderProps> = ({
         </Button>
         <Button
           onClick={() => handleClick("graph")}
-          className="flex-1"
+          className={`${
+            currentView === "graph" && isVerified ? "bg-[hsl(191,95%,33%)]" : ""
+          } flex-1`}
           variant="default"
         >
           <ChartNetwork className="mr-2 h-4 w-4" />

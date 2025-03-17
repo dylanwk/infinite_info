@@ -1,5 +1,7 @@
 
 
+export type DrawerView = "default" | "graph" | "flight-plan";
+
 export type Session = {
     maxUsers: number;
     worldType: number;
@@ -59,6 +61,7 @@ export type FlightPlanItem = {
     type: number;
     location: LocationType;
     children: FlightPlanItem[] | null;
+    distanceFromPrevious?: number;
 }
 
 export type LocationType = {

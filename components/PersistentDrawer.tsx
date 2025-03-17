@@ -6,7 +6,6 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useLazyQuery } from "@apollo/client";
-import client from "@/lib/apolloClient";
 import { GET_FLIGHT } from "@/lib/query";
 import { Flight, GQL_Track_Type } from "@/lib/types";
 import { useEffect, useState, useCallback } from "react";
@@ -36,7 +35,6 @@ export default function PersistentDrawer({
   const [currentView, setCurrentView] = useState<DrawerView>("default");
 
   const [getFlightInfo, { loading, error }] = useLazyQuery(GET_FLIGHT, {
-    client,
     onCompleted: (data) => {
       if (data?.flightv2) {
         const flightData: Flight = {

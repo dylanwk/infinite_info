@@ -7,7 +7,6 @@ import { useTheme } from "@mui/material/styles";
 import useMediaQuery from "@mui/material/useMediaQuery";
 import { Flight, GQL_Track_Type } from "@/lib/types";
 import { useLazyQuery } from "@apollo/client";
-import client from "@/lib/apolloClient";
 import { GET_FLIGHT } from "@/lib/query";
 import { DrawerView } from "./PersistentDrawer";
 import { GraphContent } from "./GraphContent";
@@ -87,7 +86,6 @@ export default function MobileDrawer({
   // #region Flight Data
   const [flight, setFlight] = useState<Flight | null>(null);
   const [getFlightInfo, { loading, error }] = useLazyQuery(GET_FLIGHT, {
-    client,
     onCompleted: (data) => {
       if (data?.flightv2) {
         const flightData: Flight = {

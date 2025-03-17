@@ -1,6 +1,5 @@
 "use client";
 
-import client from "@/lib/apolloClient";
 import { GET_FLIGHTPLAN } from "@/lib/query";
 import { useQuery } from "@apollo/client";
 import { FlightPlanItem, FlightPlanResponse } from "@/lib/types";
@@ -137,7 +136,6 @@ export const FPLContent = ({ id }: FPLContentProps) => {
   const { data, loading, error } = useQuery<FlightPlanResponse>(
     GET_FLIGHTPLAN,
     {
-      client,
       variables: { flightplanId: id },
       fetchPolicy: "cache-first",
     }

@@ -15,7 +15,6 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Loader2, Map, ChartNetwork } from "lucide-react";
 
 import { useLazyQuery } from "@apollo/client";
-import client from "@/lib/apolloClient";
 import { GET_FLIGHT } from "@/lib/query";
 import { Flight } from "@/lib/types";
 
@@ -43,7 +42,6 @@ export function FlightDrawer({
   const [drawerOpen, setDrawerOpen] = useState(false);
 
   const [getFlightInfo, { loading, error }] = useLazyQuery(GET_FLIGHT, {
-    client,
     onCompleted: (data) => {
       console.log(data);
       if (data?.flightv2) {

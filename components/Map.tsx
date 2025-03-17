@@ -28,17 +28,21 @@ import {
 } from "./ui/dialog";
 import { Button } from "./ui/button";
 import { MapHeader } from "./MapHeader";
-import simplify from "simplify-js";
 import {
   colourForAltitude,
   crossesAntiMeridian,
   feetToMetres,
 } from "@/lib/utils";
-import PersistentDrawer from "./PersistentDrawer";
+import useMediaQuery from "@mui/material/useMediaQuery";
+import DrawerProvider from "./FlightDrawer/DrawerProvider";
+
+const INACTIVITY_TIMEOUT_MS = 300000; // 5 minutes
+const REFRESH_INTERVAL_MS = 60000; // 1 minute
+const MAPBOX_STYLE = "mapbox://styles/ethaaan/cldfgnal3000201nyv4534tvx/draft";
+const AIRCRAFT_ZOOM = 5; // Zoom level when centering on aircraft
 
 const Map = () => {
   // #region State and Refs
-
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<mapboxgl.Map | null>(null);
   const styleLoadedRef = useRef<boolean>(false);
@@ -47,6 +51,7 @@ const Map = () => {
 
   const [drawerExpanded, setDrawerExpanded] = useState(false);
   const [selectedFlight, setSelectedFlight] = useState<string | null>(null);
+  const selectedFlightRef = useRef<string | null>(null);
 
   const flightPathRef = useRef<Track[] | null>(null);
   const [flightPath, setFlightPath] = useState<Track[] | null>(null);
@@ -57,6 +62,8 @@ const Map = () => {
 
   const [selectedSession, setSelectedSession] = useState<string>("");
   const selectedSessionRef = useRef(selectedSession);
+
+  const isMobile = useMediaQuery("(max-width: 768px)");
 
   const [fetchFlights] = useLazyQuery(GET_FLIGHTS, {
     client,
@@ -100,34 +107,47 @@ const Map = () => {
 
   // #region Event Handlers
 
-  /** Handles closing of flight drawer */
   const handleDrawerClose = () => {
     setDrawerExpanded(false);
     setSelectedFlight(null);
     setFlightPath(null);
   };
 
-  /** Handles opening of flight drawer */
   const handleDrawerOpen = () => setDrawerExpanded(true);
 
-  /** Changes cursor to pointer on aircraft hover */
   const handleAircraftHoverEnter = () => {
     mapRef.current!.getCanvas().style.cursor = "pointer";
   };
 
-  /** Resets cursor when leaving aircraft */
   const handleAircraftHoverExit = () => {
     mapRef.current!.getCanvas().style.cursor = "";
   };
 
   useEffect(() => {
     if (!selectedFlight || !flightPath) {
-      // clear the flight path if no flight or flight path is selected
       addFlightPositions([]);
     }
 
     addFlightPositions(flightPath || []);
   }, [flightPath, selectedFlight]);
+
+  // Function to center map on the selected flight
+  const centerMapOnSelectedFlight = (flightId: string | null) => {
+    if (!flightId || !mapRef.current) return;
+
+    // Find the flight in the current flights data
+    const flight = flightsRef.current.find((f) => f.id === flightId);
+
+    if (flight) {
+      // Fly to the aircraft position with animation
+      mapRef.current.flyTo({
+        center: [flight.longitude, flight.latitude],
+        zoom: AIRCRAFT_ZOOM,
+        duration: 1500,
+        essential: true,
+      });
+    }
+  };
 
   const handleAircraftClick = useCallback(
     (
@@ -136,7 +156,11 @@ const Map = () => {
       }
     ) => {
       const flightId = e.features?.[0]?.properties?.id as string | undefined;
-      if (flightId) setSelectedFlight(flightId);
+      if (flightId) {
+        setSelectedFlight(flightId);
+        selectedFlightRef.current = flightId;
+      }
+      centerMapOnSelectedFlight(selectedFlightRef.current);
       fetchFlightPath({
         variables: {
           input: { id: flightId, session: selectedSessionRef.current },
@@ -158,12 +182,10 @@ const Map = () => {
 
   // #region Effects
 
-  // Update selected session ref when session changes
   useEffect(() => {
     selectedSessionRef.current = selectedSession;
   }, [selectedSession]);
 
-  // Fetch flights when session changes
   useEffect(() => {
     if (styleLoadedRef.current && selectedSession) {
       fetchFlights({ variables: { input: { session: selectedSession } } });
@@ -176,8 +198,12 @@ const Map = () => {
 
       mapRef.current = new mapboxgl.Map({
         container: mapContainerRef.current,
-        style: "mapbox://styles/ethaaan/cldfgnal3000201nyv4534tvx/draft",
+        style: MAPBOX_STYLE,
         zoom: 1.8,
+        maxZoom: 18,
+        renderWorldCopies: false, // don't render multiple world copies
+        attributionControl: false, // Removed Mapbox attribution
+        preserveDrawingBuffer: false, // don't preserve drawing buffer
       });
 
       // Event listeners
@@ -225,6 +251,11 @@ const Map = () => {
     setTimeoutModal(false);
     trackUserAction();
     timeoutModalState.current = false;
+    if (selectedSessionRef.current) {
+      fetchFlights({
+        variables: { input: { session: selectedSessionRef.current } },
+      });
+    }
   };
 
   const handleTimeoutModalOpen = () => {
@@ -232,10 +263,13 @@ const Map = () => {
     timeoutModalState.current = true;
   };
 
-  // Monitor inactivity and trigger timeout modal after 5 minutes
+  // Monitor inactivity and trigger timeout modal
   useEffect(() => {
     const interval = setInterval(() => {
-      if (new Date().getTime() - activityTimerRef.current.getTime() > 300000) {
+      if (
+        new Date().getTime() - activityTimerRef.current.getTime() >
+        INACTIVITY_TIMEOUT_MS
+      ) {
         handleTimeoutModalOpen();
       }
     }, 1000);
@@ -243,7 +277,7 @@ const Map = () => {
     return () => clearInterval(interval);
   }, []);
 
-  // Refresh aircraft data every minute
+  // Refresh aircraft data
   useEffect(() => {
     const interval = setInterval(() => {
       if (!timeoutModalState.current && selectedSessionRef.current) {
@@ -251,7 +285,7 @@ const Map = () => {
           variables: { input: { session: selectedSessionRef.current } },
         });
       }
-    }, 60000); // 1 min
+    }, REFRESH_INTERVAL_MS);
 
     return () => clearInterval(interval);
   }, [fetchFlights]);
@@ -314,7 +348,7 @@ const Map = () => {
     }
   };
 
-  /* This entire function was made by Cameron Carmichael Alonso, the creator of liveflight.app */
+  /* This entire function was made by Cameron Alonso, the creator of liveflight.app */
   const addFlightPositions = (positions: Track[]) => {
     if (mapRef.current == null || !styleLoadedRef.current) return;
 
@@ -348,13 +382,9 @@ const Map = () => {
       coordinates.push([nextCoords.longitude!, nextCoords.latitude!]);
     }
 
-    // Simplify lines
-    // This should be performed for all points above 20,000 ft - but for now, we're just setting tolerance below. It applies the same Douglas-Peucker algorithm
-    const simplifiedLine = simplify(
-      coordinates.map(([x, y]) => ({ x, y })),
-      0.01,
-      true
-    );
+    // cancelled the simplify function, this is still needed to convert type from arr to obj
+    const simplifiedLine = coordinates.map(([x, y]) => ({ x, y }));
+
     coordinates = simplifiedLine.map((point) => [point.x, point.y]);
     const simplifiedPositions = positions.filter((p) =>
       simplifiedLine.some((l) => l.x == p.longitude && l.y == p.latitude)
@@ -431,13 +461,7 @@ const Map = () => {
         selectedSession={selectedSession}
         onSessionChange={(e) => setSelectedSession(e)}
       />
-      <div
-        id="map-container"
-        ref={mapContainerRef}
-        className={`h-[100vh] transition duration-1000 ${
-          drawerExpanded ? "w-3/4" : "w-full"
-        }`}
-      />
+      <div id="map-container" ref={mapContainerRef} className={"h-[100vh]"} />
       <Dialog open={timeoutModal}>
         <DialogContent className="max-w-[425px] mx-auto [&>button]:hidden">
           <DialogHeader>
@@ -459,12 +483,14 @@ const Map = () => {
         </DialogContent>
       </Dialog>
       {selectedFlight && (
-        <PersistentDrawer
-          handleOpen={handleDrawerOpen}
-          flightId={selectedFlight}
-          currentSession={selectedSession}
-          handleClose={handleDrawerClose}
-        />
+        <>
+          <DrawerProvider
+            handleOpen={handleDrawerOpen}
+            flightId={selectedFlight}
+            currentSession={selectedSession}
+            handleClose={handleDrawerClose}
+          />
+        </>
       )}
     </>
   );

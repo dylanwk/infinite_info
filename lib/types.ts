@@ -1,5 +1,7 @@
 
 
+export type DrawerView = "default" | "graph" | "flight-plan";
+
 export type Session = {
     maxUsers: number;
     worldType: number;
@@ -8,7 +10,7 @@ export type Session = {
     name: string;
     minimumGradeLevel: number;
     id: string;
-  }
+}
 
 // lightweight flight object for mapping flights to mapbox
 export type Flights = {
@@ -33,8 +35,49 @@ export type Flight = {
     heading: number;
     org: string;
     livery: string;
-    track: GQL_Track_Type[];
+    landingTimes: FlightInformationItem[];
+    takeoffTimes: FlightInformationItem[];
+    //track: GQL_Track_Type[];
 };
+
+
+export type FlightPlanResponse = {
+    flightplan: {
+        code: number;
+        flightPlan: {
+            flightPlanItems: FlightPlanItem[];
+        };
+    };
+}
+
+export type FlightPlan = {
+    code: number;
+    flightPlanItems: FlightPlanItem[];
+}
+
+export type FlightPlanItem = {
+    identifier: string | null;
+    name: string | null;
+    type: number;
+    location: LocationType;
+    children: FlightPlanItem[] | null;
+    distanceFromPrevious?: number;
+}
+
+export type LocationType = {
+    altitude: number;
+    latitude: number;
+    longitude: number;
+}
+
+
+// object for mapping takeoff & landing times
+export type FlightInformationItem = {
+    a: number; // altitude?
+    b: number; // latitude
+    c: number; // longitude
+    r: string; // reported time
+}
 
 export type GQL_Track_Type = {
     a: number;

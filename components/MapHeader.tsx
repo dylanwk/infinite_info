@@ -43,6 +43,8 @@ export const MapHeader: React.FC<MapHeaderProps> = ({
   useEffect(() => {
     if (sessions.length > 0 && !selectedSession) {
       onSessionChange(sessions[0].id);
+      console.log(sessions[0].id);
+
     }
   }
   , [sessions, selectedSession, onSessionChange]);
@@ -52,6 +54,7 @@ export const MapHeader: React.FC<MapHeaderProps> = ({
     (value: string) => {
       onSessionChange(value);
     },
+
     [onSessionChange]
   );
 

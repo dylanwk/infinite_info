@@ -12,6 +12,7 @@ import DrawerHeader from "./DrawerHeader";
 import { CircleX, Loader2 } from "lucide-react";
 import { Button } from "../ui/button";
 import PremiumDialog from "../PremiumDialog";
+import { ApolloError } from "@apollo/client";
 
 // Styled components for the drawer
 const StyledDrawer = styled(SwipeableDrawer)(({ theme }) => ({
@@ -69,7 +70,7 @@ interface MobileDrawerProps {
   handleDrawerOpen: () => void;
   flight: Flight | null;
   loading: boolean;
-  error: any;
+  error: ApolloError | undefined;
   currentView: DrawerView;
   isVerified: boolean;
   openPremiumDialog: boolean;

@@ -145,7 +145,7 @@ export const FPLContent = ({ id }: FPLContentProps) => {
     }
   );
 
-  const flightPlan = useMemo(() => processFlightPlanData(data), [data]);
+  const flightPlan = useMemo(() => (data ? processFlightPlanData(data) : null), [data]);
 
   // Calculate flight plan stats
   const stats = useMemo(() => {

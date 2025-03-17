@@ -6,15 +6,16 @@ import { Button } from "../ui/button";
 import { CircleX, Loader2 } from "lucide-react";
 import { Card, CardContent } from "../ui/card";
 import DrawerHeader from "./DrawerHeader";
-import { DrawerView } from "@/lib/types";
+import { DrawerView, Flight } from "@/lib/types";
+import { ApolloError } from "@apollo/client";
 
 interface DesktopDrawerProps {
   drawerOpen: boolean;
   openPremiumDialog: boolean;
   handleDialogClose: () => void;
-  flight: any;
+  flight: Flight | null;
   loading: boolean;
-  error: any;
+  error: ApolloError | undefined;
   handleClick: (value: DrawerView) => void;
   currentView: DrawerView;
   isVerified: boolean;

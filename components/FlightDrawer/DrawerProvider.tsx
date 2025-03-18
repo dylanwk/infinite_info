@@ -1,4 +1,3 @@
-import client from "@/lib/apolloClient";
 import { GET_FLIGHT } from "@/lib/query";
 import { DrawerView, Flight, GQL_Track_Type } from "@/lib/types";
 import { useLazyQuery } from "@apollo/client";
@@ -25,7 +24,6 @@ const useFlightData = (flightId: string | null, currentSession: string) => {
   const [track, setTrack] = useState<GQL_Track_Type[]>([]);
 
   const [getFlightInfo, { loading, error }] = useLazyQuery(GET_FLIGHT, {
-    client,
     onCompleted: (data) => {
       if (data?.flightv2) {
         const flightData: Flight = {

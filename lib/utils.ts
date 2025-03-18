@@ -1,15 +1,15 @@
 import { clsx, type ClassValue } from "clsx"
 import { twMerge } from "tailwind-merge"
-import { FlightPlan, FlightPlanItem } from "./types";
+import { FlightPlan, FlightPlanItem, FlightPlanResponse } from "./types";
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
 }
 
-export const processFlightPlanData = (data: any): FlightPlan | null => {
+export const processFlightPlanData = (data: FlightPlanResponse): FlightPlan | null => {
   if (!data?.flightplan) return null;
 
-  const mapFlightPlanItem = (item: any): FlightPlanItem => ({
+  const mapFlightPlanItem = (item: FlightPlanItem): FlightPlanItem => ({
     identifier: item.identifier,
     name: item.name,
     type: item.type,
@@ -19,6 +19,7 @@ export const processFlightPlanData = (data: any): FlightPlan | null => {
       longitude: item.location.longitude,
     },
     children: item.children ? item.children.map(mapFlightPlanItem) : null,
+    distanceFromPrevious: -1,
   });
 
   return {

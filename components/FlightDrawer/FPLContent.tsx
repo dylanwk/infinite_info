@@ -3,12 +3,7 @@
 import { GET_FLIGHTPLAN } from "@/lib/query";
 import { useQuery } from "@apollo/client";
 import { FlightPlanItem, FlightPlanResponse } from "@/lib/types";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -83,6 +78,7 @@ const FlightPlanItemCard = ({
   const showAltitude = item.location.altitude > 0;
   const showCoordinates =
     item.location.latitude !== 0.0 && item.location.longitude !== 0.0;
+  const showNM = item.distanceFromPrevious && item.distanceFromPrevious > 0;
 
   return (
     <div className="flex items-center">
@@ -119,6 +115,12 @@ const FlightPlanItemCard = ({
                         {item.location.altitude.toLocaleString()} ft
                       </span>
                     )}
+
+                    {showNM && (
+                      <span className="ml-2 text-xs font-medium bg-secondary text-secondary-foreground px-1.5 py-0.5 rounded-sm">
+                        {item.distanceFromPrevious} nm
+                      </span>
+                    )}
                   </div>
                 </div>
               </div>
@@ -141,7 +143,7 @@ export const FPLContent = ({ id }: FPLContentProps) => {
     }
   );
 
-  const flightPlan = useMemo(() => processFlightPlanData(data), [data]);
+  const flightPlan = useMemo(() => (data ? processFlightPlanData(data) : null), [data]);
 
   // Calculate flight plan stats
   const stats = useMemo(() => {
@@ -173,6 +175,7 @@ export const FPLContent = ({ id }: FPLContentProps) => {
 
     let totalDistance = 0;
     for (let i = 0; i < items.length - 1; i++) {
+      const previous = i !== 0 ? items[i - 1] : null;
       const current = items[i];
       const next = items[i + 1];
       totalDistance += calculateDistance(
@@ -181,13 +184,25 @@ export const FPLContent = ({ id }: FPLContentProps) => {
         next.location.latitude,
         next.location.longitude
       );
+
+      let distanceFromPrevious = 0;
+      if (previous) {
+        distanceFromPrevious = calculateDistance(
+          previous.location.latitude,
+          previous.location.longitude,
+          current.location.latitude,
+          current.location.longitude
+        );
+      }
+
+      items[i].distanceFromPrevious = Math.floor(distanceFromPrevious * 0.539); // km to nm
     }
 
     return {
       departureId: departure.identifier || departure.name,
       arrivalId: arrival.identifier || arrival.name,
       waypoints: items.length,
-      totalDistance: Math.round(totalDistance) * 0.539, // km to nm
+      totalDistance: Math.floor(Math.round(totalDistance) * 0.539), // km to nm
     };
   }, [flightPlan]);
 

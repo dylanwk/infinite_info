@@ -1,6 +1,5 @@
 import { useQuery } from "@apollo/client";
 import { GET_SESSIONS } from "@/lib/query";
-import client from "@/lib/apolloClient";
 import Link from "next/link";
 import Image from "next/image";
 import Container from "./Container";
@@ -14,8 +13,11 @@ import {
   SelectValue,
 } from "./ui/select";
 import { useCallback, useEffect, useState } from "react";
-import { Loader2 } from "lucide-react";
+import { Loader2, LogOut, User } from "lucide-react";
 import { Session } from "@/lib/types";
+import { useAuth } from "./providers/AuthContext";
+import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "./ui/dropdown-menu";
 
 
 
@@ -28,11 +30,13 @@ export const MapHeader: React.FC<MapHeaderProps> = ({
   selectedSession,
   onSessionChange,
 }) => {
+
+  const auth = useAuth()
+
   const [sessions, setSessions] = useState<Session[]>([]);
 
   // Query hook for fetching sessions
   const { loading, error } = useQuery(GET_SESSIONS, {
-    client,
     onCompleted: (data: { sessionsv2: Session[] }) => {
       if (data?.sessionsv2) {
         setSessions(data.sessionsv2);
@@ -48,6 +52,11 @@ export const MapHeader: React.FC<MapHeaderProps> = ({
     }
   }
   , [sessions, selectedSession, onSessionChange]);
+
+  const callSignOut = async (e: React.MouseEvent) => {
+      e.preventDefault()
+      auth?.signOut()
+  }
 
   // Memoized handler for session selection changes
   const handleSessionChange = useCallback(
@@ -69,7 +78,7 @@ export const MapHeader: React.FC<MapHeaderProps> = ({
   }
 
   return (
-    <div className="absolute z-10 mt-2 w-full bg-transparent">
+    <div className="absolute z-10 mt-10 w-full bg-transparent">
       <Container>
         <div className="flex flex-row items-center justify-between">
           {loading ? (
@@ -96,15 +105,45 @@ export const MapHeader: React.FC<MapHeaderProps> = ({
             </Select>
           )}
 
-          <Link className="flex rounded-xl text-xl" href="/">
-            <Image
-              src="/images/iilogo.svg"
-              alt="Logo"
-              width={100}
-              height={100}
-              priority
-            />
-          </Link>
+        <DropdownMenu>
+          <DropdownMenuTrigger>
+            <Avatar>
+              <AvatarImage 
+                src={auth?.user?.photoURL ?? ""}
+                width={32}
+                height={32}
+              />
+              <AvatarFallback><User /></AvatarFallback>
+            </Avatar>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent>
+            <DropdownMenuLabel>
+                <span>Account</span>
+            </DropdownMenuLabel>
+            <DropdownMenuSeparator />
+            {!auth?.user?.isAnonymous && (
+              <DropdownMenuItem>
+                <Link href="/account">
+                  <span>Manage</span>
+                </Link>
+              </DropdownMenuItem>
+            )}
+            {!auth?.user?.isAnonymous ? (
+                <DropdownMenuItem
+                  onClick={callSignOut}
+                >
+                  <LogOut />
+                  <span>Log Out</span>
+                </DropdownMenuItem>
+            ): (
+              <DropdownMenuItem>
+                <Link href="/login">
+                  <span>Sign In</span>
+                </Link>
+              </DropdownMenuItem>
+            )}
+          </DropdownMenuContent>
+        </DropdownMenu>
         </div>
       </Container>
     </div>

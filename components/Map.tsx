@@ -10,7 +10,6 @@ import "mapbox-gl/dist/mapbox-gl.css";
 import { Flights, GQL_Track_Type, Track } from "@/lib/types";
 import { useLazyQuery } from "@apollo/client";
 import { GET_FLIGHTS, GET_FLIGHTPATH } from "@/lib/query";
-import client from "@/lib/apolloClient";
 import {
   Feature,
   GeoJsonProperties,
@@ -36,9 +35,9 @@ import {
 import useMediaQuery from "@mui/material/useMediaQuery";
 import DrawerProvider from "./FlightDrawer/DrawerProvider";
 
-const INACTIVITY_TIMEOUT_MS = 300000; // 5 minutes
+const INACTIVITY_TIMEOUT_MS = 300000; // 5 minutes // TODO: Change this to 15 minutes eventually once done testing
 const REFRESH_INTERVAL_MS = 60000; // 1 minute
-const MAPBOX_STYLE = "mapbox://styles/ethaaan/cldfgnal3000201nyv4534tvx/draft";
+const MAPBOX_STYLE = "mapbox://styles/ethaaan/cldfgnal3000201nyv4534tvx/draft"; // TODO: Will need to make this more dynamic so that we can add multiple map styles from a selection menu.
 const AIRCRAFT_ZOOM = 5; // Zoom level when centering on aircraft
 
 const Map = () => {
@@ -66,7 +65,6 @@ const Map = () => {
   const isMobile = useMediaQuery("(max-width: 768px)");
 
   const [fetchFlights] = useLazyQuery(GET_FLIGHTS, {
-    client,
     fetchPolicy: "network-only",
     onCompleted: (data: { flightsv2: Flights[] }) => {
       if (data?.flightsv2) {
@@ -77,7 +75,6 @@ const Map = () => {
   });
 
   const [fetchFlightPath] = useLazyQuery(GET_FLIGHTPATH, {
-    client,
     onCompleted: (data: { flightv2: { track: GQL_Track_Type[] } }) => {
       if (data?.flightv2) {
         // must hard convert type to change attribute names. ex: b -> longitude
@@ -202,7 +199,7 @@ const Map = () => {
         zoom: 1.8,
         maxZoom: 18,
         renderWorldCopies: false, // don't render multiple world copies
-        attributionControl: false, // Removed Mapbox attribution
+        attributionControl: true, // Removed Mapbox attribution
         preserveDrawingBuffer: false, // don't preserve drawing buffer
       });
 

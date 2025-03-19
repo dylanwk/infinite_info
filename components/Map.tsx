@@ -33,13 +33,15 @@ import {
   crossesAntiMeridian,
   feetToMetres,
 } from "@/lib/utils";
-import useMediaQuery from "@mui/material/useMediaQuery";
 import DrawerProvider from "./FlightDrawer/DrawerProvider";
+import SettingsDialog, { IconSize } from "./SettingsDialog";
 
 const INACTIVITY_TIMEOUT_MS = 300000; // 5 minutes
 const REFRESH_INTERVAL_MS = 60000; // 1 minute
 const MAPBOX_STYLE = "mapbox://styles/ethaaan/cldfgnal3000201nyv4534tvx/draft";
 const AIRCRAFT_ZOOM = 5; // Zoom level when centering on aircraft
+
+type PROJECTION_TYPE = "globe" | "mercator";
 
 const Map = () => {
   // #region State and Refs
@@ -63,7 +65,10 @@ const Map = () => {
   const [selectedSession, setSelectedSession] = useState<string>("");
   const selectedSessionRef = useRef(selectedSession);
 
-  const isMobile = useMediaQuery("(max-width: 768px)");
+  const [settingsModal, setSettingsModal] = useState(false);
+  const [iconSize, setIconSize] = useState<IconSize>(0.3);
+  const [projection, setProjection] = useState<PROJECTION_TYPE>("globe");
+  const [showFPL, setShowFPL] = useState(true);
 
   const [fetchFlights] = useLazyQuery(GET_FLIGHTS, {
     client,
@@ -113,23 +118,49 @@ const Map = () => {
     setFlightPath(null);
   };
 
-  const handleDrawerOpen = () => setDrawerExpanded(true);
-
   const handleAircraftHoverEnter = () => {
-    mapRef.current!.getCanvas().style.cursor = "pointer";
+    if (mapRef.current) mapRef.current.getCanvas().style.cursor = "pointer";
   };
 
   const handleAircraftHoverExit = () => {
-    mapRef.current!.getCanvas().style.cursor = "";
+    if (mapRef.current) mapRef.current.getCanvas().style.cursor = "";
   };
 
+  const handleSettingsClose = () => setSettingsModal(false);
+
+  // Function to toggle map projection
+  const toggleProjection = useCallback(() => {
+    const newProjection = projection === "globe" ? "mercator" : "globe";
+    setProjection(newProjection);
+
+    if (mapRef.current) {
+      mapRef.current.setProjection(newProjection);
+      // Store a reference to the current center and zoom
+      const currentCenter = mapRef.current.getCenter();
+      const currentZoom = mapRef.current.getZoom();
+
+      // Give the map a moment to process the projection change, then fly to the same location
+      setTimeout(() => {
+        if (mapRef.current) {
+          mapRef.current.flyTo({
+            center: currentCenter,
+            zoom: currentZoom,
+            duration: 1000,
+          });
+        }
+      }, 50);
+    }
+
+    trackUserAction();
+  }, [projection]);
+
   useEffect(() => {
-    if (!selectedFlight || !flightPath) {
+    if (!selectedFlight || !flightPath || !showFPL) {
       addFlightPositions([]);
     }
 
     addFlightPositions(flightPath || []);
-  }, [flightPath, selectedFlight]);
+  }, [flightPath, selectedFlight, showFPL]);
 
   // Function to center map on the selected flight
   const centerMapOnSelectedFlight = (flightId: string | null) => {
@@ -161,11 +192,29 @@ const Map = () => {
         selectedFlightRef.current = flightId;
       }
       centerMapOnSelectedFlight(selectedFlightRef.current);
-      fetchFlightPath({
-        variables: {
-          input: { id: flightId, session: selectedSessionRef.current },
-        },
-      });
+      if (showFPL) {
+        fetchFlightPath({
+          variables: {
+            input: { id: flightId, session: selectedSessionRef.current },
+          },
+        });
+      } else {
+        // Clear any existing flight path if showFPL is false
+        setFlightPath(null);
+        flightPathRef.current = null;
+
+        // Make sure the flight path layer is cleared/hidden
+        if (mapRef.current && mapRef.current.getSource("flight-route")) {
+          const emptyFeatureCollection: FeatureCollection = {
+            type: "FeatureCollection",
+            features: [],
+          };
+
+          (mapRef.current.getSource("flight-route") as GeoJSONSource).setData(
+            emptyFeatureCollection
+          );
+        }
+      }
       trackUserAction();
     },
     [fetchFlightPath]
@@ -181,6 +230,38 @@ const Map = () => {
   }, []);
 
   // #region Effects
+
+  // new effect that updates map layer each iconSize change
+  useEffect(() => {
+    if (!styleLoadedRef.current) return;
+
+    if (mapRef.current && mapRef.current.getLayer("aircraft-layer")) {
+      mapRef.current.setLayoutProperty("aircraft-layer", "icon-size", iconSize);
+      console.log("icon size changed to " + iconSize);
+    }
+  }, [iconSize]);
+
+  // new effect to handle projection changes
+  useEffect(() => {
+    if (mapRef.current && styleLoadedRef.current) {
+      console.log("Changing projection to: " + projection);
+      mapRef.current.setProjection(projection);
+    }
+  }, [projection]);
+
+  // new effect to handle flight path visibility changes
+  useEffect(() => {
+    if (!mapRef.current || !styleLoadedRef.current) return;
+
+    if (mapRef.current.getLayer("flight-route")) {
+      const visibility = showFPL ? "visible" : "none";
+      mapRef.current.setLayoutProperty(
+        "flight-route",
+        "visibility",
+        visibility
+      );
+    }
+  }, [showFPL]);
 
   useEffect(() => {
     selectedSessionRef.current = selectedSession;
@@ -199,6 +280,7 @@ const Map = () => {
       mapRef.current = new mapboxgl.Map({
         container: mapContainerRef.current,
         style: MAPBOX_STYLE,
+        projection: projection,
         zoom: 1.8,
         maxZoom: 18,
         renderWorldCopies: false, // don't render multiple world copies
@@ -226,7 +308,12 @@ const Map = () => {
 
       mapRef.current.on("style.load", () => {
         styleLoadedRef.current = true;
-        mapRef.current?.resize();
+        if (mapRef.current) {
+          mapRef.current.resize();
+          // Set initial projection
+          mapRef.current.setProjection(projection);
+        }
+
         fetchFlights({
           variables: { input: { session: selectedSessionRef.current } },
         });
@@ -237,7 +324,7 @@ const Map = () => {
     return () => {
       mapRef.current?.remove();
     };
-  }, [fetchFlights, handleAircraftClick, handleMapClick]);
+  }, [fetchFlights, handleAircraftClick, handleMapClick, projection]);
 
   // #endregion
 
@@ -334,7 +421,7 @@ const Map = () => {
           source: "aircraft",
           layout: {
             "icon-image": "test1",
-            "icon-size": 0.3,
+            "icon-size": iconSize,
             "icon-allow-overlap": true,
             "icon-rotate": ["get", "heading"],
             "icon-rotation-alignment": "map",
@@ -439,6 +526,7 @@ const Map = () => {
           layout: {
             "line-join": "round",
             "line-cap": "round",
+            visibility: showFPL ? "visible" : "none",
           },
           paint: {
             "line-color": ["get", "color"],
@@ -460,6 +548,17 @@ const Map = () => {
       <MapHeader
         selectedSession={selectedSession}
         onSessionChange={(e) => setSelectedSession(e)}
+        onSettingsClick={() => setSettingsModal(true)}
+      />
+      <SettingsDialog
+        onIconSizeChange={(value) => setIconSize(value)}
+        iconSize={iconSize}
+        open={settingsModal}
+        handleClose={handleSettingsClose}
+        projection={projection}
+        onProjectionChange={toggleProjection}
+        showFPL={showFPL}
+        onFPLChange={() => setShowFPL(!showFPL)}
       />
       <div id="map-container" ref={mapContainerRef} className={"h-[100vh]"} />
       <Dialog open={timeoutModal}>
@@ -485,7 +584,7 @@ const Map = () => {
       {selectedFlight && (
         <>
           <DrawerProvider
-            handleOpen={handleDrawerOpen}
+            handleOpen={() => setDrawerExpanded(true)}
             flightId={selectedFlight}
             currentSession={selectedSession}
             handleClose={handleDrawerClose}

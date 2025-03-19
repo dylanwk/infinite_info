@@ -14,19 +14,22 @@ import {
   SelectValue,
 } from "./ui/select";
 import { useCallback, useEffect, useState } from "react";
-import { Loader2 } from "lucide-react";
+import { Loader2, Settings } from "lucide-react";
 import { Session } from "@/lib/types";
+import { Button } from "./ui/button";
 
 
 
 interface MapHeaderProps {
   selectedSession: string;
   onSessionChange: (value: string) => void;
+  onSettingsClick: () => void;
 }
 
 export const MapHeader: React.FC<MapHeaderProps> = ({
   selectedSession,
   onSessionChange,
+  onSettingsClick,
 }) => {
   const [sessions, setSessions] = useState<Session[]>([]);
 
@@ -72,6 +75,7 @@ export const MapHeader: React.FC<MapHeaderProps> = ({
     <div className="absolute z-10 mt-2 w-full bg-transparent">
       <Container>
         <div className="flex flex-row items-center justify-between">
+          <div className="flex flex-row gap-3">
           {loading ? (
             <Select>
               <SelectTrigger className="w-[180px] bg-gray-100">
@@ -95,6 +99,10 @@ export const MapHeader: React.FC<MapHeaderProps> = ({
               </SelectContent>
             </Select>
           )}
+          <Button onClick={onSettingsClick} variant={"secondary"} className="w-[50px] bg-gray-50 border-none shadow-lg">
+            <Settings color="black" />
+          </Button>
+          </div>
 
           <Link className="flex rounded-xl text-xl" href="/">
             <Image

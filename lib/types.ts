@@ -12,6 +12,51 @@ export type Session = {
     id: string;
 }
 
+// Main Airport type
+interface Airport {
+    atc: ATC[];
+    atis: string | null;
+    city: string;
+    class: number;
+    elevation: number;
+    has3dBuildings: boolean;
+    hasJetbridges: boolean;
+    hasSafedockUnits: boolean;
+    hasTaxiwayRouting: boolean;
+    iata: string;
+    icao: string;
+    inbounds: string[];
+    latitude: number;
+    longitude: number;
+    name: string;
+    outbounds: string[];
+    state: string | null;
+    timezone: string;
+}
+
+// ATC types
+interface ATC {
+    atcRank: string;
+    startTime: string;
+    type: string;
+    userId: string;
+    username: string;
+    virtualOrganization: string | null;
+}
+
+interface AirportQueryInput {
+    icao: String;
+    only3d: Boolean;
+    onlyATC: Boolean;
+    server: String;
+}
+
+interface AirportsQueryResponse {
+    data: {
+      airportsv2: Airport[];
+    }
+  }
+
 // lightweight flight object for mapping flights to mapbox
 export type Flights = {
     id: string,

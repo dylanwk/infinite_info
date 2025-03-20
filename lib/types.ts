@@ -2,6 +2,13 @@
 
 export type DrawerView = "default" | "graph" | "flight-plan";
 
+export const TERRAIN = "mapbox://styles/ethaaan/clyc4nfqi00ze01nz1mgk31z9";
+export const DARK = "mapbox://styles/ethaaan/cl5brx866001d14jgxqxhw6j4";
+export const SATELLITE = "mapbox://styles/ethaaan/clf7mmn4v000e01q62b10pz9b";
+export const DEFAULT = "mapbox://styles/ethaaan/cldfgnal3000201nyv4534tvx/draft";
+
+export type MapStyle = typeof TERRAIN | typeof DARK | typeof SATELLITE | typeof DEFAULT;
+
 export type Session = {
     maxUsers: number;
     worldType: number;

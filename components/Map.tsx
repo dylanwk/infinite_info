@@ -7,7 +7,7 @@ import mapboxgl, {
   MapMouseEvent,
 } from "mapbox-gl";
 import "mapbox-gl/dist/mapbox-gl.css";
-import { Flights, GQL_Track_Type, Track } from "@/lib/types";
+import { DEFAULT, Flights, GQL_Track_Type, MapStyle, Track } from "@/lib/types";
 import { useLazyQuery } from "@apollo/client";
 import { GET_FLIGHTS, GET_FLIGHTPATH } from "@/lib/query";
 import client from "@/lib/apolloClient";
@@ -33,12 +33,12 @@ import {
   crossesAntiMeridian,
   feetToMetres,
 } from "@/lib/utils";
-import useMediaQuery from "@mui/material/useMediaQuery";
 import DrawerProvider from "./FlightDrawer/DrawerProvider";
 
 const INACTIVITY_TIMEOUT_MS = 300000; // 5 minutes
 const REFRESH_INTERVAL_MS = 60000; // 1 minute
 const MAPBOX_STYLE = "mapbox://styles/ethaaan/cldfgnal3000201nyv4534tvx/draft";
+
 const AIRCRAFT_ZOOM = 5; // Zoom level when centering on aircraft
 
 const Map = () => {
@@ -63,7 +63,7 @@ const Map = () => {
   const [selectedSession, setSelectedSession] = useState<string>("");
   const selectedSessionRef = useRef(selectedSession);
 
-  const isMobile = useMediaQuery("(max-width: 768px)");
+  const [mapStyle, setMapStyle] = useState<MapStyle>(DEFAULT);
 
   const [fetchFlights] = useLazyQuery(GET_FLIGHTS, {
     client,
@@ -106,6 +106,11 @@ const Map = () => {
   // #endregion
 
   // #region Event Handlers
+
+  const handleMapStyleChange = (style: MapStyle) => {
+    setMapStyle(style);
+    trackUserAction();
+  };
 
   const handleDrawerClose = () => {
     setDrawerExpanded(false);
@@ -183,6 +188,47 @@ const Map = () => {
   // #region Effects
 
   useEffect(() => {
+    if (!mapRef.current) return;
+
+    // Save current state
+    const currentCenter = mapRef.current.getCenter();
+    const currentZoom = mapRef.current.getZoom();
+    const currentBearing = mapRef.current.getBearing();
+    const currentPitch = mapRef.current.getPitch();
+
+    // Reset styles loaded flag
+    styleLoadedRef.current = false;
+
+    // Set new style
+    mapRef.current.setStyle(mapStyle);
+
+    // Re-add the event listener for style.load
+    mapRef.current.once("style.load", () => {
+      styleLoadedRef.current = true;
+
+      // Reset view state
+      mapRef.current?.jumpTo({
+        center: currentCenter,
+        zoom: currentZoom,
+        bearing: currentBearing,
+        pitch: currentPitch,
+      });
+
+      // Re-add data sources and layers
+      if (flightsRef.current.length > 0) {
+        updateAircraftLayer(flightsRef.current);
+        console.log("updating aircraft layer");
+      }
+
+      if (flightPathRef.current) {
+        addFlightPositions(flightPathRef.current);
+      }
+
+      mapRef.current?.resize();
+    });
+  }, [mapStyle]);
+
+  useEffect(() => {
     selectedSessionRef.current = selectedSession;
   }, [selectedSession]);
 
@@ -198,7 +244,7 @@ const Map = () => {
 
       mapRef.current = new mapboxgl.Map({
         container: mapContainerRef.current,
-        style: MAPBOX_STYLE,
+        style: mapStyle,
         zoom: 1.8,
         maxZoom: 18,
         renderWorldCopies: false, // don't render multiple world copies
@@ -460,6 +506,8 @@ const Map = () => {
       <MapHeader
         selectedSession={selectedSession}
         onSessionChange={(e) => setSelectedSession(e)}
+        mapStyle={mapStyle}
+        onMapStyleChange={handleMapStyleChange}
       />
       <div id="map-container" ref={mapContainerRef} className={"h-[100vh]"} />
       <Dialog open={timeoutModal}>

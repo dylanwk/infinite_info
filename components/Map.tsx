@@ -68,7 +68,7 @@ const Map = () => {
   const [settingsModal, setSettingsModal] = useState(false);
   const [iconSize, setIconSize] = useState<IconSize>(0.3);
   const [projection, setProjection] = useState<PROJECTION_TYPE>("globe");
-  const [showFPL, setShowFPL] = useState(true);
+  const [showTrack, setShowTrack] = useState(true);
 
   const [fetchFlights] = useLazyQuery(GET_FLIGHTS, {
     client,
@@ -155,12 +155,12 @@ const Map = () => {
   }, [projection]);
 
   useEffect(() => {
-    if (!selectedFlight || !flightPath || !showFPL) {
+    if (!selectedFlight || !flightPath || !showTrack) {
       addFlightPositions([]);
     }
 
     addFlightPositions(flightPath || []);
-  }, [flightPath, selectedFlight, showFPL]);
+  }, [flightPath, selectedFlight, showTrack]);
 
   // Function to center map on the selected flight
   const centerMapOnSelectedFlight = (flightId: string | null) => {
@@ -192,7 +192,7 @@ const Map = () => {
         selectedFlightRef.current = flightId;
       }
       centerMapOnSelectedFlight(selectedFlightRef.current);
-      if (showFPL) {
+      if (showTrack) {
         fetchFlightPath({
           variables: {
             input: { id: flightId, session: selectedSessionRef.current },
@@ -254,14 +254,14 @@ const Map = () => {
     if (!mapRef.current || !styleLoadedRef.current) return;
 
     if (mapRef.current.getLayer("flight-route")) {
-      const visibility = showFPL ? "visible" : "none";
+      const visibility = showTrack ? "visible" : "none";
       mapRef.current.setLayoutProperty(
         "flight-route",
         "visibility",
         visibility
       );
     }
-  }, [showFPL]);
+  }, [showTrack]);
 
   useEffect(() => {
     selectedSessionRef.current = selectedSession;
@@ -526,7 +526,7 @@ const Map = () => {
           layout: {
             "line-join": "round",
             "line-cap": "round",
-            visibility: showFPL ? "visible" : "none",
+            visibility: showTrack ? "visible" : "none",
           },
           paint: {
             "line-color": ["get", "color"],
@@ -557,8 +557,8 @@ const Map = () => {
         handleClose={handleSettingsClose}
         projection={projection}
         onProjectionChange={toggleProjection}
-        showFPL={showFPL}
-        onFPLChange={() => setShowFPL(!showFPL)}
+        showTrack={showTrack}
+        onFPLChange={() => setShowTrack(!showTrack)}
       />
       <div id="map-container" ref={mapContainerRef} className={"h-[100vh]"} />
       <Dialog open={timeoutModal}>

@@ -21,7 +21,7 @@ interface SettingsDialogProps {
   projection: "globe" | "mercator";
   onProjectionChange?: () => void;
   isPremium?: boolean;
-  showFPL: boolean;
+  showTrack: boolean;
   onFPLChange: () => void;
 }
 
@@ -32,7 +32,7 @@ const SettingsDialog: React.FC<SettingsDialogProps> = ({
   onIconSizeChange,
   projection = "globe",
   onProjectionChange,
-  showFPL,
+  showTrack: showFPL,
   onFPLChange,
 }) => {
   const handleIconSizeChange = (value: string) => {
@@ -94,7 +94,7 @@ const SettingsDialog: React.FC<SettingsDialogProps> = ({
               />
             </div>
             <div className="flex items-center justify-between p-3 bg-slate-50 rounded-xl">
-              <div className="flex items-center gap-2">Show FPL</div>
+              <div className="flex items-center gap-2">Show Track</div>
               <Switch checked={showFPL} onCheckedChange={onFPLChange} />
             </div>
           </div>

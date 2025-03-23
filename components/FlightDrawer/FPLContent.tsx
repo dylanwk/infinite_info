@@ -79,7 +79,7 @@ const FlightPlanItemCard = ({
   const showAltitude = item.location.altitude > 0;
   const showCoordinates =
     item.location.latitude !== 0.0 && item.location.longitude !== 0.0;
-  const showNM = item.distanceFromPrevious && item.distanceFromPrevious > 0;
+  const showNM = !!item.distanceFromPrevious && item.distanceFromPrevious > 0;
 
   return (
     <div className="flex items-center">
@@ -145,7 +145,10 @@ export const FPLContent = ({ id }: FPLContentProps) => {
     }
   );
 
-  const flightPlan = useMemo(() => (data ? processFlightPlanData(data) : null), [data]);
+  const flightPlan = useMemo(
+    () => (data ? processFlightPlanData(data) : null),
+    [data]
+  );
 
   // Calculate flight plan stats
   const stats = useMemo(() => {

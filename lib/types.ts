@@ -12,8 +12,8 @@ export type Session = {
     id: string;
 }
 
-// Main Airport type
-interface Airport {
+// Main Airport type NEW
+export interface Airport {
     atc: ATC[];
     atis: string | null;
     city: string;
@@ -34,8 +34,8 @@ interface Airport {
     timezone: string;
 }
 
-// ATC types
-interface ATC {
+// ATC types NEW
+export interface ATC {
     atcRank: string;
     startTime: string;
     type: string;
@@ -44,14 +44,16 @@ interface ATC {
     virtualOrganization: string | null;
 }
 
-interface AirportQueryInput {
-    icao: String;
-    only3d: Boolean;
-    onlyATC: Boolean;
-    server: String;
+// Airport query input NEW
+export interface AirportQueryInput {
+    icao?: String;
+    only3d?: Boolean;
+    onlyATC?: Boolean;
+    server?: String;
 }
 
-interface AirportsQueryResponse {
+// Airport query response NEW
+export interface AirportsQueryResponse {
     data: {
       airportsv2: Airport[];
     }

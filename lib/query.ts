@@ -1,6 +1,39 @@
 import { gql } from "@apollo/client";
 
 
+
+export const GET_AIRPORTS = gql`
+query Airportsv2($input: AirportsV2Input!) {
+  airportsv2(input: $input) {
+    atc {
+      atcRank
+      startTime
+      type
+      userId
+      username
+      virtualOrganization
+    }
+    atis
+    city
+    class
+    elevation
+    has3dBuildings
+    hasJetbridges
+    hasSafedockUnits
+    hasTaxiwayRouting
+    iata
+    icao
+    inbounds
+    latitude
+    longitude
+    name
+    outbounds
+    state
+    timezone
+  }
+}`
+
+
 // variables = none
 export const GET_SESSIONS = gql`
 query GET_SESSIONS {
@@ -88,15 +121,6 @@ export const GET_FLIGHT = gql`
   }
 }`
 
-
-export const GET_AIRPORTS = gql`
-query ExampleQuery($input: AirportsV2Input!) {
-  airportsv2(input: $input) {
-    latitude
-    longitude
-  }
-}
-`;
 
 
 export const GET_FLIGHTPLAN = gql`

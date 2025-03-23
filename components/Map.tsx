@@ -7,7 +7,7 @@ import mapboxgl, {
   MapMouseEvent,
 } from "mapbox-gl";
 import "mapbox-gl/dist/mapbox-gl.css";
-import { Flights, GQL_Track_Type, Track } from "@/lib/types";
+import { Airport, Flights, GQL_Track_Type, Track } from "@/lib/types";
 import { useLazyQuery } from "@apollo/client";
 import { GET_FLIGHTS, GET_FLIGHTPATH } from "@/lib/query";
 import client from "@/lib/apolloClient";
@@ -16,6 +16,7 @@ import {
   GeoJsonProperties,
   LineString,
   FeatureCollection,
+  Point,
 } from "geojson";
 import {
   Dialog,
@@ -35,6 +36,7 @@ import {
 } from "@/lib/utils";
 import useMediaQuery from "@mui/material/useMediaQuery";
 import DrawerProvider from "./FlightDrawer/DrawerProvider";
+import { useAirports } from "@/hooks/useAirports";
 
 const INACTIVITY_TIMEOUT_MS = 300000; // 5 minutes
 const REFRESH_INTERVAL_MS = 60000; // 1 minute
@@ -63,7 +65,7 @@ const Map = () => {
   const [selectedSession, setSelectedSession] = useState<string>("");
   const selectedSessionRef = useRef(selectedSession);
 
-  const isMobile = useMediaQuery("(max-width: 768px)");
+  const { airports, loading, error, getAirports } = useAirports(client);
 
   const [fetchFlights] = useLazyQuery(GET_FLIGHTS, {
     client,
@@ -230,6 +232,9 @@ const Map = () => {
         fetchFlights({
           variables: { input: { session: selectedSessionRef.current } },
         });
+        // get airports without inputs for now
+        getAirports({});
+
         trackUserAction();
       });
     }
@@ -238,6 +243,13 @@ const Map = () => {
       mapRef.current?.remove();
     };
   }, [fetchFlights, handleAircraftClick, handleMapClick]);
+
+  // new effect to add airports
+  useEffect(() => {
+    if (airports.length > 0 && styleLoadedRef.current && mapRef.current) {
+      addAirports(airports);
+    }
+  }, [airports]);
 
   // #endregion
 
@@ -293,6 +305,77 @@ const Map = () => {
   // #endregion
 
   // #region Drawing
+
+  const addAirports = useCallback((airports: Airport[]) => {
+    if (!mapRef.current || !styleLoadedRef.current || !airports.length) return;
+
+    const geoJsonData: FeatureCollection = {
+      type: "FeatureCollection",
+      features: airports.map((airport) => ({
+        type: "Feature",
+        geometry: {
+          type: "Point",
+          coordinates: [airport.longitude, airport.latitude],
+        },
+        properties: {
+          id: airport.icao,
+          name: airport.name,
+          city: airport.city,
+          hasATC: airport.atc.length > 0,
+          has3dBuildings: airport.has3dBuildings,
+          class: airport.class,
+          iata: airport.iata,
+          icao: airport.icao,
+        },
+      })),
+    };
+
+    const geoJsonSource: GeoJSONSourceSpecification = {
+      type: "geojson",
+      data: geoJsonData,
+      cluster: false,
+    };
+
+    try {
+      const existingSource = mapRef.current.getSource("airports") as
+        | GeoJSONSource
+        | undefined;
+
+      if (!existingSource) {
+        mapRef.current.addSource("airports", geoJsonSource);
+
+        mapRef.current.addLayer({
+          id: "airports-layer",
+          type: "circle",
+          source: "airports",
+          paint: {
+            "circle-color": "#FF0000", // Red color for airports
+            "circle-radius": 6.5, // Fixed size for all airports
+            "circle-opacity": 0.6,
+            "circle-stroke-width": 2,
+            "circle-stroke-color": "#FFFFFF", // White border
+          },
+        });
+
+        // Add event listeners for airport features
+        //mapRef.current.on("click", "airports-layer", handleAirportClick as never);
+        mapRef.current.on("mouseenter", "airports-layer", () => {
+          if (mapRef.current)
+            mapRef.current.getCanvas().style.cursor = "pointer";
+        });
+
+        mapRef.current.on("mouseleave", "airports-layer", () => {
+          if (mapRef.current) mapRef.current.getCanvas().style.cursor = "";
+        });
+
+
+      } else {
+        existingSource.setData(geoJsonData);
+      }
+    } catch (error) {
+      console.error("Error adding airports layer:", error);
+    }
+  }, []);
 
   /** Updates aircraft layer with fetched flight data */
   const updateAircraftLayer = (flights: Flights[]) => {

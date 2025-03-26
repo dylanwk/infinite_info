@@ -20,17 +20,14 @@ const StyledDrawer = styled(SwipeableDrawer)(({ theme }) => ({
     borderTopLeftRadius: 16,
     borderTopRightRadius: 16,
     overflow: "visible",
-    transition: "height 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
-  },
+    transition: "height 0.3s cubic-bezier(0.4, 0, 0.2, 1)"
+  }
 }));
 
 const DrawerHandle = styled("div")(({ theme }) => ({
   width: 80,
   height: 5,
-  backgroundColor:
-    theme.palette.mode === "dark"
-      ? "rgba(255, 255, 255, 0.3)"
-      : "rgba(0, 0, 0, 0.2)",
+  backgroundColor: theme.palette.mode === "dark" ? "rgba(255, 255, 255, 0.3)" : "rgba(0, 0, 0, 0.2)",
   borderRadius: 3,
   position: "absolute",
   top: 10,
@@ -47,21 +44,21 @@ const DrawerHandle = styled("div")(({ theme }) => ({
     top: "-12px",
     left: "50%",
     transform: "translateX(-50%)",
-    zIndex: -1, // Behind the visual element
-  },
+    zIndex: -1 // Behind the visual element
+  }
 }));
 
 const DrawerContent = styled(Box)({
   height: "100%",
   overflowY: "auto",
-  paddingTop: 24,
+  paddingTop: 24
 });
 
 // Predefined drawer height breakpoints for snapping
 const DRAWER_HEIGHTS = {
   COLLAPSED: 30,
   HALF: 60,
-  FULL: 90,
+  FULL: 90
 };
 
 interface MobileDrawerProps {
@@ -93,7 +90,7 @@ export default function MobileDrawer({
   handleClick,
   getViewContent,
   drawerOpen,
-  setDrawerOpen,
+  setDrawerOpen
 }: MobileDrawerProps) {
   const [drawerHeight, setDrawerHeight] = useState(DRAWER_HEIGHTS.COLLAPSED);
 
@@ -106,9 +103,7 @@ export default function MobileDrawer({
 
   // Function to snap drawer to nearest breakpoint
   const snapToHeight = () => {
-    const paperElement = drawerRef.current?.querySelector(
-      ".MuiDrawer-paper"
-    ) as HTMLElement;
+    const paperElement = drawerRef.current?.querySelector(".MuiDrawer-paper") as HTMLElement;
 
     // Calculate nearest snap point
     let targetHeight;
@@ -121,33 +116,28 @@ export default function MobileDrawer({
     }
 
     if (paperElement) {
-      paperElement.style.transition =
-        "height 0.3s cubic-bezier(0.4, 0, 0.2, 1)";
+      paperElement.style.transition = "height 0.3s cubic-bezier(0.4, 0, 0.2, 1)";
     }
 
     setDrawerHeight(targetHeight);
   };
 
-  const toggleDrawer =
-    (open: boolean) => (event: React.KeyboardEvent | React.MouseEvent) => {
-      if (
-        event.type === "keydown" &&
-        ((event as React.KeyboardEvent).key === "Tab" ||
-          (event as React.KeyboardEvent).key === "Shift")
-      ) {
-        return;
-      }
+  const toggleDrawer = (open: boolean) => (event: React.KeyboardEvent | React.MouseEvent) => {
+    if (
+      event.type === "keydown" &&
+      ((event as React.KeyboardEvent).key === "Tab" || (event as React.KeyboardEvent).key === "Shift")
+    ) {
+      return;
+    }
 
-      setDrawerOpen(open);
-      if (open) {
-        setDrawerHeight(DRAWER_HEIGHTS.HALF);
-      }
-    };
+    setDrawerOpen(open);
+    if (open) {
+      setDrawerHeight(DRAWER_HEIGHTS.HALF);
+    }
+  };
 
   const handleTouchStart = (event: React.TouchEvent) => {
-    const paperElement = drawerRef.current?.querySelector(
-      ".MuiDrawer-paper"
-    ) as HTMLElement;
+    const paperElement = drawerRef.current?.querySelector(".MuiDrawer-paper") as HTMLElement;
 
     if (paperElement) {
       paperElement.style.transition = "none";
@@ -164,10 +154,7 @@ export default function MobileDrawer({
     const deltaY = touchStartY.current - touchY;
     const windowHeight = window.innerHeight;
     const heightChange = (deltaY / windowHeight) * 100;
-    const newHeight = Math.min(
-      DRAWER_HEIGHTS.FULL,
-      Math.max(10, touchStartHeight.current + heightChange)
-    );
+    const newHeight = Math.min(DRAWER_HEIGHTS.FULL, Math.max(10, touchStartHeight.current + heightChange));
 
     setDrawerHeight(newHeight);
   };
@@ -179,9 +166,7 @@ export default function MobileDrawer({
 
   // Set up the drawer's touch events and handle paper element height
   useEffect(() => {
-    const paperElement = drawerRef.current?.querySelector(
-      ".MuiDrawer-paper"
-    ) as HTMLElement;
+    const paperElement = drawerRef.current?.querySelector(".MuiDrawer-paper") as HTMLElement;
 
     if (paperElement) {
       paperElement.style.height = `${drawerHeight}vh`;
@@ -197,7 +182,7 @@ export default function MobileDrawer({
 
     // Add the event listener with the non-passive option
     document.addEventListener("touchmove", preventDefaultForDrawer, {
-      passive: false,
+      passive: false
     });
 
     // Clean up event listener on component unmount
@@ -208,12 +193,7 @@ export default function MobileDrawer({
 
   return (
     <>
-      {openPremiumDialog && (
-        <div
-          className="fixed inset-0 bg-background/80 backdrop-blur-sm z-50"
-          aria-hidden="true"
-        />
-      )}
+      {openPremiumDialog && <div className="fixed inset-0 bg-background/80 backdrop-blur-sm z-50" aria-hidden="true" />}
 
       {/* Premium dialog with higher z-index */}
       <div className="relative z-[60]">
@@ -235,8 +215,8 @@ export default function MobileDrawer({
             height: `${drawerHeight}vh`,
             maxWidth: "100%",
             margin: "0 auto",
-            zIndex: 40,
-          },
+            zIndex: 40
+          }
         }}
       >
         <DrawerHandle
@@ -249,14 +229,8 @@ export default function MobileDrawer({
           <ScrollArea className="h-full">
             <div className="p-4 space-y-4">
               <div className="flex justify-between items-center mt-2">
-                <h2 className="text-3xl font-bold">
-                  {flight?.callsign || "Flight Details"}
-                </h2>
-                <Button
-                  variant="ghost"
-                  className="rounded-full"
-                  onClick={handleClose}
-                >
+                <h2 className="text-3xl font-bold">{flight?.callsign || "Flight Details"}</h2>
+                <Button variant="ghost" className="rounded-full" onClick={handleClose}>
                   <CircleX />
                 </Button>
               </div>
@@ -298,12 +272,7 @@ export default function MobileDrawer({
             </div>
           </ScrollArea>
           <div className="flex w-full p-4">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleClose}
-              className="w-full"
-            >
+            <Button variant="outline" size="sm" onClick={handleClose} className="w-full">
               Close
             </Button>
           </div>

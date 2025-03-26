@@ -12,8 +12,8 @@ const Home = () => {
             Infinite Info <br /> Now on the Web
           </h1>
           <p className="mb-8 max-w-xl text-muted-foreground lg:text-xl">
-            Infinite Info&apos;s IOS Infinite Flight tracking app is now available on the web.
-            Track your flights, view your stats, and much more.
+            Infinite Info&apos;s IOS Infinite Flight tracking app is now available on the web. Track your flights, view
+            your stats, and much more.
           </p>
           <div className="flex w-full flex-col justify-center gap-2 sm:flex-row lg:justify-start">
             <Link href={"/map"}>
@@ -28,12 +28,7 @@ const Home = () => {
           </div>
         </div>
         <div className="">
-          <Image
-            src="/images/mockupv1.png"
-            alt="Description of image"
-            width={650}
-            height={500}
-          />
+          <Image src="/images/mockupv1.png" alt="Description of image" width={650} height={500} />
         </div>
       </div>
     </section>

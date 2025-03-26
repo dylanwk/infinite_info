@@ -1,23 +1,13 @@
 "use client";
 
 import { useRef, useEffect, useState, useCallback } from "react";
-import mapboxgl, {
-  GeoJSONSource,
-  GeoJSONSourceSpecification,
-  MapMouseEvent,
-} from "mapbox-gl";
+import mapboxgl, { GeoJSONSource, GeoJSONSourceSpecification, MapMouseEvent } from "mapbox-gl";
 import "mapbox-gl/dist/mapbox-gl.css";
 import { Airport, Flights, GQL_Track_Type, Track } from "@/lib/types";
 import { useLazyQuery } from "@apollo/client";
 import { GET_FLIGHTS, GET_FLIGHTPATH } from "@/lib/query";
 import client from "@/lib/apolloClient";
-import {
-  Feature,
-  GeoJsonProperties,
-  LineString,
-  FeatureCollection,
-  Point,
-} from "geojson";
+import { Feature, GeoJsonProperties, LineString, FeatureCollection, Point } from "geojson";
 import {
   Dialog,
   DialogClose,
@@ -25,19 +15,14 @@ import {
   DialogDescription,
   DialogFooter,
   DialogHeader,
-  DialogTitle,
+  DialogTitle
 } from "./ui/dialog";
 import { Button } from "./ui/button";
 import { MapHeader } from "./MapHeader";
-import {
-  colourForAltitude,
-  crossesAntiMeridian,
-  feetToMetres,
-} from "@/lib/utils";
+import { colourForAltitude, crossesAntiMeridian, feetToMetres } from "@/lib/utils";
 import DrawerProvider from "./FlightDrawer/DrawerProvider";
 import { useAirports } from "@/hooks/useAirports";
-import "../styles/globals.css"
-
+import "../styles/globals.css";
 
 const INACTIVITY_TIMEOUT_MS = 300000; // 5 minutes
 const REFRESH_INTERVAL_MS = 60000; // 1 minute
@@ -76,7 +61,7 @@ const Map = () => {
         flightsRef.current = data.flightsv2;
         updateAircraftLayer(data.flightsv2);
       }
-    },
+    }
   });
 
   const [fetchFlightPath] = useLazyQuery(GET_FLIGHTPATH, {
@@ -85,7 +70,7 @@ const Map = () => {
       if (data?.flightv2) {
         // must hard convert type to change attribute names. ex: b -> longitude
         const convertAttributeNames = (track: GQL_Track_Type[]): Track[] => {
-          return track.map((item) => ({
+          return track.map(item => ({
             altitude: item.a,
             latitude: item.b,
             longitude: item.c,
@@ -94,7 +79,7 @@ const Map = () => {
             reportedTime: item.r,
             speed: item.s,
             verticalSpeed: item.v,
-            aircraftState: item.z,
+            aircraftState: item.z
           }));
         };
 
@@ -103,7 +88,7 @@ const Map = () => {
         flightPathRef.current = convertedFlightPath;
         setFlightPath(convertedFlightPath);
       }
-    },
+    }
   });
 
   // #endregion
@@ -134,25 +119,23 @@ const Map = () => {
     addFlightPositions(flightPath || []);
   }, [flightPath, selectedFlight]);
 
-  // Function to center map on the selected flight
   const centerMapOnSelectedFlight = (flightId: string | null) => {
     if (!flightId || !mapRef.current) return;
 
-    // Find the flight in the current flights data
-    const flight = flightsRef.current.find((f) => f.id === flightId);
+    const flight = flightsRef.current.find(f => f.id === flightId);
 
     if (flight) {
-      // Fly to the aircraft position with animation
       mapRef.current.flyTo({
         center: [flight.longitude, flight.latitude],
         zoom: AIRCRAFT_ZOOM,
         duration: 1500,
-        essential: true,
+        essential: true
       });
     }
   };
 
-  const airportMapClickHelper = (
+  // helper function to convert MapEvent to type-safe icao
+  const airportClickProcessor = (
     e: MapMouseEvent & {
       features?: Feature<Point, GeoJsonProperties>[];
     }
@@ -173,7 +156,7 @@ const Map = () => {
   const handleAirportClick = (icao: string) => {
     if (!mapRef.current) return;
 
-    const current_airport = airports.find((a) => a.icao === icao);
+    const current_airport = airports.find(a => a.icao === icao);
 
     if (!current_airport) {
       console.log("Airport not found");
@@ -190,7 +173,7 @@ const Map = () => {
       center: [longitude, latitude],
       zoom: 4,
       duration: 1500,
-      essential: true,
+      essential: true
     });
   };
 
@@ -208,8 +191,8 @@ const Map = () => {
       centerMapOnSelectedFlight(selectedFlightRef.current);
       fetchFlightPath({
         variables: {
-          input: { id: flightId, session: selectedSessionRef.current },
-        },
+          input: { id: flightId, session: selectedSessionRef.current }
+        }
       });
       trackUserAction();
     },
@@ -248,32 +231,20 @@ const Map = () => {
         maxZoom: 18,
         renderWorldCopies: false, // don't render multiple world copies
         attributionControl: false, // Removed Mapbox attribution
-        preserveDrawingBuffer: false, // don't preserve drawing buffer
+        preserveDrawingBuffer: false // don't preserve drawing buffer
       });
 
       // Event listeners
       mapRef.current.on("click", handleMapClick);
-      mapRef.current.on(
-        "click",
-        "aircraft-layer",
-        handleAircraftClick as never
-      ); // Type assertion required
-      mapRef.current.on(
-        "mouseenter",
-        "aircraft-layer",
-        handleAircraftHoverEnter
-      );
-      mapRef.current.on(
-        "mouseleave",
-        "aircraft-layer",
-        handleAircraftHoverExit
-      );
+      mapRef.current.on<"click">("click", "aircraft-layer", handleAircraftClick as never);
+      mapRef.current.on("mouseenter", "aircraft-layer", handleAircraftHoverEnter);
+      mapRef.current.on("mouseleave", "aircraft-layer", handleAircraftHoverExit);
 
       mapRef.current.on("style.load", () => {
         styleLoadedRef.current = true;
         mapRef.current?.resize();
         fetchFlights({
-          variables: { input: { session: selectedSessionRef.current } },
+          variables: { input: { session: selectedSessionRef.current } }
         });
         // get airports without inputs for now
         getAirports({});
@@ -311,7 +282,7 @@ const Map = () => {
     timeoutModalState.current = false;
     if (selectedSessionRef.current) {
       fetchFlights({
-        variables: { input: { session: selectedSessionRef.current } },
+        variables: { input: { session: selectedSessionRef.current } }
       });
     }
   };
@@ -324,10 +295,7 @@ const Map = () => {
   // Monitor inactivity and trigger timeout modal
   useEffect(() => {
     const interval = setInterval(() => {
-      if (
-        new Date().getTime() - activityTimerRef.current.getTime() >
-        INACTIVITY_TIMEOUT_MS
-      ) {
+      if (new Date().getTime() - activityTimerRef.current.getTime() > INACTIVITY_TIMEOUT_MS) {
         handleTimeoutModalOpen();
       }
     }, 1000);
@@ -340,7 +308,7 @@ const Map = () => {
     const interval = setInterval(() => {
       if (!timeoutModalState.current && selectedSessionRef.current) {
         fetchFlights({
-          variables: { input: { session: selectedSessionRef.current } },
+          variables: { input: { session: selectedSessionRef.current } }
         });
       }
     }, REFRESH_INTERVAL_MS);
@@ -358,11 +326,11 @@ const Map = () => {
     // create GeoJSON data structure for airports
     const geoJsonData: FeatureCollection = {
       type: "FeatureCollection",
-      features: airports.map((airport) => ({
+      features: airports.map(airport => ({
         type: "Feature",
         geometry: {
           type: "Point",
-          coordinates: [airport.longitude, airport.latitude],
+          coordinates: [airport.longitude, airport.latitude]
         },
         properties: {
           id: airport.icao,
@@ -372,21 +340,19 @@ const Map = () => {
           has3dBuildings: airport.has3dBuildings,
           class: airport.class,
           iata: airport.iata,
-          icao: airport.icao,
-        },
-      })),
+          icao: airport.icao
+        }
+      }))
     };
 
     const geoJsonSource: GeoJSONSourceSpecification = {
       type: "geojson",
       data: geoJsonData,
-      cluster: false,
+      cluster: false
     };
 
     try {
-      const existingSource = mapRef.current.getSource("airports") as
-        | GeoJSONSource
-        | undefined;
+      const existingSource = mapRef.current.getSource("airports") as GeoJSONSource | undefined;
 
       if (!existingSource) {
         mapRef.current.addSource("airports", geoJsonSource);
@@ -400,18 +366,13 @@ const Map = () => {
             "circle-radius": 6.5,
             "circle-opacity": 0.5,
             "circle-stroke-width": 2,
-            "circle-stroke-color": "#FFFFFF",
-          },
+            "circle-stroke-color": "#FFFFFF"
+          }
         });
 
-        mapRef.current.on(
-          "click",
-          "airports-layer",
-          airportMapClickHelper as never
-        );
+        mapRef.current.on("click", "airports-layer", airportClickProcessor as never);
         mapRef.current.on("mouseenter", "airports-layer", () => {
-          if (mapRef.current)
-            mapRef.current.getCanvas().style.cursor = "pointer";
+          if (mapRef.current) mapRef.current.getCanvas().style.cursor = "pointer";
         });
         mapRef.current.on("mouseleave", "airports-layer", () => {
           if (mapRef.current) mapRef.current.getCanvas().style.cursor = "";
@@ -420,15 +381,10 @@ const Map = () => {
         existingSource.setData(geoJsonData);
       }
 
-      const existingMarkers = document.querySelectorAll(
-        ".airport-marker-container"
-      );
-      existingMarkers.forEach((marker) => marker.remove());
+      const existingMarkers = document.querySelectorAll(".airport-marker-container");
+      existingMarkers.forEach(marker => marker.remove());
 
-      const createElement = (
-        tagName: string,
-        className: string
-      ): HTMLElement => {
+      const createElement = (tagName: string, className: string): HTMLElement => {
         const element = document.createElement(tagName);
         element.className = className;
         return element;
@@ -447,10 +403,10 @@ const Map = () => {
         8: "", // Aircraft
         9: "R", // Recorded
         10: "", // Unknown
-        11: "", // Unused
+        11: "" // Unused
       };
 
-      airports.forEach((airport) => {
+      airports.forEach(airport => {
         if (!airport.atc || airport.atc.length === 0) return;
 
         // create custom elements for airport marker
@@ -463,8 +419,8 @@ const Map = () => {
 
         // build yellow service code string
         const serviceCode = airport.atc
-          .map((service) => atcMapping[service.type] || "")
-          .filter((code) => code !== "")
+          .map(service => atcMapping[service.type] || "")
+          .filter(code => code !== "")
           .join("");
 
         servicesElement.textContent = serviceCode;
@@ -481,7 +437,7 @@ const Map = () => {
           new mapboxgl.Marker({
             element: markerElement,
             anchor: "bottom",
-            offset: [0, 0],
+            offset: [0, 0]
           })
             .setLngLat([airport.longitude, airport.latitude])
             .addTo(mapRef.current);
@@ -498,23 +454,23 @@ const Map = () => {
 
     const geoJsonData: FeatureCollection = {
       type: "FeatureCollection",
-      features: flights.map((flight) => ({
+      features: flights.map(flight => ({
         type: "Feature",
         geometry: {
           type: "Point",
-          coordinates: [flight.longitude, flight.latitude],
+          coordinates: [flight.longitude, flight.latitude]
         },
         properties: {
           id: flight.id,
           heading: flight.heading,
-          icon: "plane-icon",
-        },
-      })),
+          icon: "plane-icon"
+        }
+      }))
     };
 
     const geoJsonSource: GeoJSONSourceSpecification = {
       type: "geojson",
-      data: geoJsonData,
+      data: geoJsonData
     };
 
     try {
@@ -522,9 +478,7 @@ const Map = () => {
 
       if (!dataSource) {
         mapRef.current.addSource("aircraft", geoJsonSource);
-        aircraftDataSourceRef.current = mapRef.current.getSource(
-          "aircraft"
-        ) as GeoJSONSource;
+        aircraftDataSourceRef.current = mapRef.current.getSource("aircraft") as GeoJSONSource;
 
         mapRef.current.addLayer({
           id: "aircraft-layer",
@@ -535,8 +489,8 @@ const Map = () => {
             "icon-size": 0.3,
             "icon-allow-overlap": true,
             "icon-rotate": ["get", "heading"],
-            "icon-rotation-alignment": "map",
-          },
+            "icon-rotation-alignment": "map"
+          }
         });
       } else {
         dataSource.setData(geoJsonData);
@@ -565,7 +519,7 @@ const Map = () => {
       if (
         crossesAntiMeridian([
           [nextCoords.longitude || 0, nextCoords.latitude || 0],
-          [currentCoords.longitude || 0, currentCoords.latitude || 0],
+          [currentCoords.longitude || 0, currentCoords.latitude || 0]
         ]) ||
         hasCrossedMeridian
       ) {
@@ -583,9 +537,9 @@ const Map = () => {
     // cancelled the simplify function, this is still needed to convert type from arr to obj
     const simplifiedLine = coordinates.map(([x, y]) => ({ x, y }));
 
-    coordinates = simplifiedLine.map((point) => [point.x, point.y]);
-    const simplifiedPositions = positions.filter((p) =>
-      simplifiedLine.some((l) => l.x == p.longitude && l.y == p.latitude)
+    coordinates = simplifiedLine.map(point => [point.x, point.y]);
+    const simplifiedPositions = positions.filter(p =>
+      simplifiedLine.some(l => l.x == p.longitude && l.y == p.latitude)
     );
 
     const features: Feature[] = [];
@@ -593,14 +547,12 @@ const Map = () => {
       features.push({
         type: "Feature",
         properties: {
-          color: colourForAltitude(
-            feetToMetres(simplifiedPositions[x].altitude || 0)
-          ),
+          color: colourForAltitude(feetToMetres(simplifiedPositions[x].altitude || 0))
         },
         geometry: {
           type: "LineString",
-          coordinates: [coordinates[x], coordinates[x + 1]]!,
-        },
+          coordinates: [coordinates[x], coordinates[x + 1]]!
+        }
       });
     }
 
@@ -608,25 +560,18 @@ const Map = () => {
       type: "geojson",
       data: {
         type: "FeatureCollection",
-        features: features,
+        features: features
       } as FeatureCollection<LineString, GeoJsonProperties>,
-      tolerance: 0.1,
+      tolerance: 0.1
     };
 
     if (mapRef.current) {
-      const existingRouteLine = mapRef.current.getSource("flight-route") as
-        | GeoJSONSource
-        | undefined;
+      const existingRouteLine = mapRef.current.getSource("flight-route") as GeoJSONSource | undefined;
 
       if (!existingRouteLine) {
-        mapRef.current.addSource(
-          "flight-route",
-          geoJsonData as GeoJSONSourceSpecification
-        );
+        mapRef.current.addSource("flight-route", geoJsonData as GeoJSONSourceSpecification);
       } else {
-        existingRouteLine.setData(
-          geoJsonData.data as FeatureCollection<LineString, GeoJsonProperties>
-        );
+        existingRouteLine.setData(geoJsonData.data as FeatureCollection<LineString, GeoJsonProperties>);
       }
 
       if (!mapRef.current.getLayer("flight-route")) {
@@ -636,12 +581,12 @@ const Map = () => {
           source: "flight-route",
           layout: {
             "line-join": "round",
-            "line-cap": "round",
+            "line-cap": "round"
           },
           paint: {
             "line-color": ["get", "color"],
-            "line-width": 2,
-          },
+            "line-width": 2
+          }
         });
       }
     }
@@ -655,10 +600,7 @@ const Map = () => {
 
   return (
     <>
-      <MapHeader
-        selectedSession={selectedSession}
-        onSessionChange={(e) => setSelectedSession(e)}
-      />
+      <MapHeader selectedSession={selectedSession} onSessionChange={e => setSelectedSession(e)} />
       <div id="map-container" ref={mapContainerRef} className={"h-[100vh]"} />
       <Dialog open={timeoutModal}>
         <DialogContent className="max-w-[425px] mx-auto [&>button]:hidden">
@@ -666,8 +608,7 @@ const Map = () => {
             <DialogTitle>Are you still there?</DialogTitle>
             <div className="my-1.5">
               <DialogDescription>
-                You have been inactive for 15 minutes. To resume where you left
-                off, click continue below.
+                You have been inactive for 15 minutes. To resume where you left off, click continue below.
               </DialogDescription>
             </div>
           </DialogHeader>

@@ -27,7 +27,7 @@ const DrawerHeader: React.FC<DrawerHeaderProps> = ({
   livery,
   handleClick,
   currentView,
-  isVerified,
+  isVerified
 }) => {
   if (!username || username === "") {
     username = "Anonymous";
@@ -49,27 +49,19 @@ const DrawerHeader: React.FC<DrawerHeaderProps> = ({
       </div>
       <div className="flex flex-row justify-evenly rounded-xl gap-2 bg-gray-100 p-4">
         <div className="flex flex-col items-center">
-          <p className="text-xs text-neutral-700 font-light tracking-tight">
-            Alt. (MSL)
-          </p>
+          <p className="text-xs text-neutral-700 font-light tracking-tight">Alt. (MSL)</p>
           <div>{Math.floor(altitude)} ft</div>
         </div>
         <div className="flex flex-col items-center">
-          <p className="text-xs text-neutral-700 font-light tracking-tight">
-            Heading (T)
-          </p>
+          <p className="text-xs text-neutral-700 font-light tracking-tight">Heading (T)</p>
           <div>{heading.toFixed(1)}°</div>
         </div>
         <div className="flex flex-col items-center">
-          <p className="text-xs text-neutral-700 font-light tracking-tight">
-            VS
-          </p>
+          <p className="text-xs text-neutral-700 font-light tracking-tight">VS</p>
           <div>{Math.floor(vs)} fpm</div>
         </div>
         <div className="flex flex-col items-center">
-          <p className="text-xs text-neutral-700 font-light tracking-tight">
-            Spd. (GS)
-          </p>
+          <p className="text-xs text-neutral-700 font-light tracking-tight">Spd. (GS)</p>
           <div>{Math.floor(speed)} kts</div>
         </div>
       </div>
@@ -77,11 +69,7 @@ const DrawerHeader: React.FC<DrawerHeaderProps> = ({
       <div className="flex flex-col md:flex-row gap-2">
         <Button
           onClick={() => handleClick("flight-plan")}
-          className={`${
-            currentView === "flight-plan" && isVerified
-              ? "bg-[hsl(191,95%,33%)]"
-              : ""
-          } flex-1`}
+          className={`${currentView === "flight-plan" && isVerified ? "bg-[hsl(191,95%,33%)]" : ""} flex-1`}
           variant="default"
         >
           <Map className="mr-2 h-4 w-4" />
@@ -89,9 +77,7 @@ const DrawerHeader: React.FC<DrawerHeaderProps> = ({
         </Button>
         <Button
           onClick={() => handleClick("graph")}
-          className={`${
-            currentView === "graph" && isVerified ? "bg-[hsl(191,95%,33%)]" : ""
-          } flex-1`}
+          className={`${currentView === "graph" && isVerified ? "bg-[hsl(191,95%,33%)]" : ""} flex-1`}
           variant="default"
         >
           <ChartNetwork className="mr-2 h-4 w-4" />

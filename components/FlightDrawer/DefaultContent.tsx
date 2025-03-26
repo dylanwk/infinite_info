@@ -9,10 +9,7 @@ interface DefaultContentProps {
   currentSession: string;
 }
 
-export default function DefaultContent({
-  flight,
-  currentSession,
-}: DefaultContentProps) {
+export default function DefaultContent({ flight, currentSession }: DefaultContentProps) {
   return (
     <div className="space-y-4">
       {/* Flight Information */}
@@ -56,18 +53,14 @@ export default function DefaultContent({
                 {flight.takeoffTimes.map((takeoff, index) => (
                   <React.Fragment key={index}>
                     <div className="py-3">
-                      <div className="mb-1 font-medium">
-                        Takeoff {index + 1}
-                      </div>
+                      <div className="mb-1 font-medium">Takeoff {index + 1}</div>
                       <div className="space-y-1 text-sm">
                         <div className="flex justify-between">
                           <span className="text-muted-foreground">Heading</span>
                           <span>{Math.round(takeoff.a)}°</span>
                         </div>
                         <div className="flex justify-between">
-                          <span className="text-muted-foreground">
-                            Coordinates
-                          </span>
+                          <span className="text-muted-foreground">Coordinates</span>
                           <span>
                             {takeoff.b.toFixed(4)}°, {takeoff.c.toFixed(4)}°
                           </span>
@@ -84,9 +77,7 @@ export default function DefaultContent({
               </div>
             </ScrollArea>
           ) : (
-            <div className="p-4 text-center text-muted-foreground">
-              No takeoff times available
-            </div>
+            <div className="p-4 text-center text-muted-foreground">No takeoff times available</div>
           )}
         </CardContent>
       </Card>
@@ -103,18 +94,14 @@ export default function DefaultContent({
                 {flight.landingTimes.map((landing, index) => (
                   <React.Fragment key={index}>
                     <div className="py-3">
-                      <div className="mb-1 font-medium">
-                        Landing {index + 1}
-                      </div>
+                      <div className="mb-1 font-medium">Landing {index + 1}</div>
                       <div className="space-y-1 text-sm">
                         <div className="flex justify-between">
                           <span className="text-muted-foreground">Heading</span>
                           <span>{Math.round(landing.a)}°</span>
                         </div>
                         <div className="flex justify-between">
-                          <span className="text-muted-foreground">
-                            Coordinates
-                          </span>
+                          <span className="text-muted-foreground">Coordinates</span>
                           <span>
                             {landing.b.toFixed(4)}°, {landing.c.toFixed(4)}°
                           </span>
@@ -131,9 +118,7 @@ export default function DefaultContent({
               </div>
             </ScrollArea>
           ) : (
-            <div className="p-4 text-center text-muted-foreground">
-              No landing times available
-            </div>
+            <div className="p-4 text-center text-muted-foreground">No landing times available</div>
           )}
         </CardContent>
       </Card>
@@ -141,25 +126,11 @@ export default function DefaultContent({
   );
 }
 
-function DetailItem({
-  label,
-  value,
-  truncate = false,
-}: {
-  label: string;
-  value: string;
-  truncate?: boolean;
-}) {
+function DetailItem({ label, value, truncate = false }: { label: string; value: string; truncate?: boolean }) {
   return (
     <div className="flex justify-between items-center py-1">
       <span className="text-sm text-muted-foreground">{label}</span>
-      <span
-        className={`text-sm font-medium ${
-          truncate ? "truncate max-w-[150px]" : ""
-        }`}
-      >
-        {value}
-      </span>
+      <span className={`text-sm font-medium ${truncate ? "truncate max-w-[150px]" : ""}`}>{value}</span>
     </div>
   );
 }

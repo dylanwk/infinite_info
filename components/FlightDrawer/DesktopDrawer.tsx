@@ -34,16 +34,11 @@ const DesktopDrawer: React.FC<DesktopDrawerProps> = ({
   currentView,
   isVerified,
   handleDrawerClose,
-  getViewContent,
+  getViewContent
 }) => {
   return (
     <>
-      {openPremiumDialog && (
-        <div
-          className="fixed inset-0 bg-background/80 backdrop-blur-sm z-50"
-          aria-hidden="true"
-        />
-      )}
+      {openPremiumDialog && <div className="fixed inset-0 bg-background/80 backdrop-blur-sm z-50" aria-hidden="true" />}
 
       {/* Premium dialog with higher z-index */}
       <div className="relative z-[60]">
@@ -59,8 +54,8 @@ const DesktopDrawer: React.FC<DesktopDrawerProps> = ({
             overflow: "hidden",
             borderRadius: "16px", // rounded corners
             boxShadow: "0px 4px 12px rgba(0, 0, 0, 0.1)", // shadow
-            zIndex: 40,
-          },
+            zIndex: 40
+          }
         }}
         variant="persistent"
         anchor={"right"}
@@ -69,14 +64,8 @@ const DesktopDrawer: React.FC<DesktopDrawerProps> = ({
         <ScrollArea className="h-full">
           <div className="p-4 space-y-4">
             <div className="flex justify-between items-center mt-2">
-              <h2 className="text-3xl font-bold">
-                {flight?.callsign || "Flight Details"}
-              </h2>
-              <Button
-                variant={"ghost"}
-                className="rounded-full"
-                onClick={handleDrawerClose}
-              >
+              <h2 className="text-3xl font-bold">{flight?.callsign || "Flight Details"}</h2>
+              <Button variant={"ghost"} className="rounded-full" onClick={handleDrawerClose}>
                 <CircleX />
               </Button>
             </div>
@@ -118,12 +107,7 @@ const DesktopDrawer: React.FC<DesktopDrawerProps> = ({
           </div>
         </ScrollArea>
         <div className="flex w-full p-4">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleDrawerClose}
-            className="w-full"
-          >
+          <Button variant="outline" size="sm" onClick={handleDrawerClose} className="w-full">
             Close
           </Button>
         </div>

@@ -24,7 +24,7 @@ const getWaypointTypeName = (type: number): string => {
     0: "Waypoint",
     1: "Airport",
     2: "Navaid",
-    3: "Fix",
+    3: "Fix"
     // Add more types as needed
   };
   return types[type as keyof typeof types] || "Unknown";
@@ -65,20 +65,11 @@ const getWaypointRole = (
 // #endregion
 
 // #region FP Item Card
-const FlightPlanItemCard = ({
-  item,
-  index,
-  total,
-}: {
-  item: FlightPlanItem;
-  index: number;
-  total: number;
-}) => {
+const FlightPlanItemCard = ({ item, index, total }: { item: FlightPlanItem; index: number; total: number }) => {
   const role = getWaypointRole(item, index, total);
   const displayName = item.identifier || item.name || "Unnamed Point";
   const showAltitude = item.location.altitude > 0;
-  const showCoordinates =
-    item.location.latitude !== 0.0 && item.location.longitude !== 0.0;
+  const showCoordinates = item.location.latitude !== 0.0 && item.location.longitude !== 0.0;
   const showNM = item.distanceFromPrevious && item.distanceFromPrevious > 0;
 
   return (
@@ -98,16 +89,11 @@ const FlightPlanItemCard = ({
                 </div>
 
                 <div className="text-sm text-muted-foreground mt-1 flex items-center gap-2">
-                  {item.identifier && item.name && (
-                    <span>
-                      {item.name !== item.identifier ? item.name : ""}
-                    </span>
-                  )}
+                  {item.identifier && item.name && <span>{item.name !== item.identifier ? item.name : ""}</span>}
                   <div className="flex items-center gap-1">
                     {showCoordinates && (
                       <span className="text-xs text-muted-foreground">
-                        {item.location.latitude.toFixed(4)}°,{" "}
-                        {item.location.longitude.toFixed(4)}°
+                        {item.location.latitude.toFixed(4)}°, {item.location.longitude.toFixed(4)}°
                       </span>
                     )}
 
@@ -136,14 +122,11 @@ const FlightPlanItemCard = ({
 // #endregion
 // #region FPL Drawer
 export const FPLContent = ({ id }: FPLContentProps) => {
-  const { data, loading, error } = useQuery<FlightPlanResponse>(
-    GET_FLIGHTPLAN,
-    {
-      client,
-      variables: { flightplanId: id },
-      fetchPolicy: "cache-first",
-    }
-  );
+  const { data, loading, error } = useQuery<FlightPlanResponse>(GET_FLIGHTPLAN, {
+    client,
+    variables: { flightplanId: id },
+    fetchPolicy: "cache-first"
+  });
 
   const flightPlan = useMemo(() => (data ? processFlightPlanData(data) : null), [data]);
 
@@ -156,21 +139,13 @@ export const FPLContent = ({ id }: FPLContentProps) => {
     const arrival = items[items.length - 1];
 
     // Calculate total distance using Haversine formula
-    const calculateDistance = (
-      lat1: number,
-      lon1: number,
-      lat2: number,
-      lon2: number
-    ) => {
+    const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: number) => {
       const R = 6371; // Earth's radius in km
       const dLat = ((lat2 - lat1) * Math.PI) / 180;
       const dLon = ((lon2 - lon1) * Math.PI) / 180;
       const a =
         Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-        Math.cos((lat1 * Math.PI) / 180) *
-          Math.cos((lat2 * Math.PI) / 180) *
-          Math.sin(dLon / 2) *
-          Math.sin(dLon / 2);
+        Math.cos((lat1 * Math.PI) / 180) * Math.cos((lat2 * Math.PI) / 180) * Math.sin(dLon / 2) * Math.sin(dLon / 2);
       const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
       return R * c;
     };
@@ -204,7 +179,7 @@ export const FPLContent = ({ id }: FPLContentProps) => {
       departureId: departure.identifier || departure.name,
       arrivalId: arrival.identifier || arrival.name,
       waypoints: items.length,
-      totalDistance: Math.floor(Math.round(totalDistance) * 0.539), // km to nm
+      totalDistance: Math.floor(Math.round(totalDistance) * 0.539) // km to nm
     };
   }, [flightPlan]);
 
@@ -236,9 +211,7 @@ export const FPLContent = ({ id }: FPLContentProps) => {
     return (
       <Alert>
         <AlertTitle>No flight plan found</AlertTitle>
-        <AlertDescription>
-          The requested flight plan could not be loaded.
-        </AlertDescription>
+        <AlertDescription>The requested flight plan could not be loaded.</AlertDescription>
       </Alert>
     );
   }

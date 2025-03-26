@@ -2,35 +2,17 @@
 "use client";
 
 import { TrendingUp, TrendingDown } from "lucide-react";
-import {
-  CartesianGrid,
-  Line,
-  LineChart,
-  XAxis,
-  YAxis,
-  Tooltip,
-} from "recharts";
+import { CartesianGrid, Line, LineChart, XAxis, YAxis, Tooltip } from "recharts";
 
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import {
-  ChartConfig,
-  ChartContainer,
-  ChartTooltipContent,
-} from "@/components/ui/chart";
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { ChartConfig, ChartContainer, ChartTooltipContent } from "@/components/ui/chart";
 import { GQL_Track_Type } from "@/lib/types";
 
 const chartConfig = {
   desktop: {
     label: "Desktop",
-    color: "hsl(var(--chart-1))",
-  },
+    color: "hsl(var(--chart-1))"
+  }
 } satisfies ChartConfig;
 
 export type altitudeTrack = {
@@ -61,19 +43,19 @@ export function GraphContent({ tracks, callsign }: GraphContentProps) {
     return `${hours}hr:${minutes}Z`;
   };
 
-  const altitudeData: altitudeTrack[] = tracks.map((track) => ({
+  const altitudeData: altitudeTrack[] = tracks.map(track => ({
     altitude: track.a,
-    reportedTime: formatReportedTime(track.r),
+    reportedTime: formatReportedTime(track.r)
   }));
 
-  const speedData: speedTrack[] = tracks.map((track) => ({
+  const speedData: speedTrack[] = tracks.map(track => ({
     speed: track.s,
-    reportedTime: formatReportedTime(track.r),
+    reportedTime: formatReportedTime(track.r)
   }));
 
-  const vsData: vsTrack[] = tracks.map((track) => ({
+  const vsData: vsTrack[] = tracks.map(track => ({
     vs: track.v,
-    reportedTime: formatReportedTime(track.r),
+    reportedTime: formatReportedTime(track.r)
   }));
 
   return (
@@ -91,7 +73,7 @@ export function GraphContent({ tracks, callsign }: GraphContentProps) {
               margin={{
                 right: 8,
                 left: 0,
-                top: 12,
+                top: 12
               }}
             >
               <CartesianGrid vertical={false} />
@@ -101,22 +83,11 @@ export function GraphContent({ tracks, callsign }: GraphContentProps) {
                 axisLine={false}
                 tickMargin={8}
                 interval="equidistantPreserveStart"
-                tickFormatter={(value) => value.slice(0, 8)}
+                tickFormatter={value => value.slice(0, 8)}
               />
-              <YAxis
-                tickLine={false}
-                axisLine={false}
-                tickMargin={8}
-                domain={["auto", "auto"]}
-              />
+              <YAxis tickLine={false} axisLine={false} tickMargin={8} domain={["auto", "auto"]} />
               <Tooltip cursor={false} content={<ChartTooltipContent />} />
-              <Line
-                dataKey="altitude"
-                type="monotone"
-                stroke="#000000"
-                strokeWidth={3}
-                dot={false}
-              />
+              <Line dataKey="altitude" type="monotone" stroke="#000000" strokeWidth={3} dot={false} />
             </LineChart>
           </ChartContainer>
         </CardContent>
@@ -135,7 +106,7 @@ export function GraphContent({ tracks, callsign }: GraphContentProps) {
               margin={{
                 right: 8,
                 left: 0,
-                top: 12,
+                top: 12
               }}
             >
               <CartesianGrid vertical={false} />
@@ -145,22 +116,11 @@ export function GraphContent({ tracks, callsign }: GraphContentProps) {
                 axisLine={false}
                 tickMargin={8}
                 interval="equidistantPreserveStart"
-                tickFormatter={(value) => value.slice(0, 8)}
+                tickFormatter={value => value.slice(0, 8)}
               />
-              <YAxis
-                tickLine={false}
-                axisLine={false}
-                tickMargin={8}
-                domain={["auto", "auto"]}
-              />
+              <YAxis tickLine={false} axisLine={false} tickMargin={8} domain={["auto", "auto"]} />
               <Tooltip cursor={false} content={<ChartTooltipContent />} />
-              <Line
-                dataKey="speed"
-                type="monotone"
-                stroke="#000000"
-                strokeWidth={3}
-                dot={false}
-              />
+              <Line dataKey="speed" type="monotone" stroke="#000000" strokeWidth={3} dot={false} />
             </LineChart>
           </ChartContainer>
         </CardContent>
@@ -179,7 +139,7 @@ export function GraphContent({ tracks, callsign }: GraphContentProps) {
               margin={{
                 right: 8,
                 left: 0,
-                top: 12,
+                top: 12
               }}
             >
               <CartesianGrid vertical={false} />
@@ -189,22 +149,11 @@ export function GraphContent({ tracks, callsign }: GraphContentProps) {
                 axisLine={false}
                 tickMargin={8}
                 interval="equidistantPreserveStart"
-                tickFormatter={(value) => value.slice(0, 8)}
+                tickFormatter={value => value.slice(0, 8)}
               />
-              <YAxis
-                tickLine={false}
-                axisLine={false}
-                tickMargin={8}
-                domain={["auto", "auto"]}
-              />
+              <YAxis tickLine={false} axisLine={false} tickMargin={8} domain={["auto", "auto"]} />
               <Tooltip cursor={false} content={<ChartTooltipContent />} />
-              <Line
-                dataKey="vs"
-                type="monotone"
-                stroke="#000000"
-                strokeWidth={3}
-                dot={false}
-              />
+              <Line dataKey="vs" type="monotone" stroke="#000000" strokeWidth={3} dot={false} />
             </LineChart>
           </ChartContainer>
         </CardContent>

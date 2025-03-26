@@ -38,7 +38,7 @@ export interface Airport {
 export interface ATC {
     atcRank: string;
     startTime: string;
-    type: string;
+    type: 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11;
     userId: string;
     username: string;
     virtualOrganization: string | null;
@@ -46,10 +46,10 @@ export interface ATC {
 
 // Airport query input NEW
 export interface AirportQueryInput {
-    icao?: String;
-    only3d?: Boolean;
-    onlyATC?: Boolean;
-    server?: String;
+    icao?: string;
+    only3d?: boolean;
+    onlyATC?: boolean;
+    server?: string;
 }
 
 // Airport query response NEW

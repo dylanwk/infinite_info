@@ -34,9 +34,10 @@ import {
   crossesAntiMeridian,
   feetToMetres,
 } from "@/lib/utils";
-import useMediaQuery from "@mui/material/useMediaQuery";
 import DrawerProvider from "./FlightDrawer/DrawerProvider";
 import { useAirports } from "@/hooks/useAirports";
+import "../styles/globals.css"
+
 
 const INACTIVITY_TIMEOUT_MS = 300000; // 5 minutes
 const REFRESH_INTERVAL_MS = 60000; // 1 minute
@@ -151,6 +152,48 @@ const Map = () => {
     }
   };
 
+  const airportMapClickHelper = (
+    e: MapMouseEvent & {
+      features?: Feature<Point, GeoJsonProperties>[];
+    }
+  ) => {
+    if (!mapRef.current || !e.features?.length) return;
+
+    const feature = e.features[0];
+    const airport_icao = feature?.properties?.icao;
+
+    if (typeof airport_icao !== "string") {
+      console.log("Airport ICAO not found");
+      return;
+    }
+
+    handleAirportClick(airport_icao);
+  };
+
+  const handleAirportClick = (icao: string) => {
+    if (!mapRef.current) return;
+
+    const current_airport = airports.find((a) => a.icao === icao);
+
+    if (!current_airport) {
+      console.log("Airport not found");
+      return;
+    }
+
+    const { latitude, longitude } = current_airport;
+    if (typeof latitude !== "number" || typeof longitude !== "number") {
+      console.warn("Invalid airport coordinates");
+      return;
+    }
+
+    mapRef.current.flyTo({
+      center: [longitude, latitude],
+      zoom: 4,
+      duration: 1500,
+      essential: true,
+    });
+  };
+
   const handleAircraftClick = useCallback(
     (
       e: MapMouseEvent & {
@@ -234,6 +277,7 @@ const Map = () => {
         });
         // get airports without inputs for now
         getAirports({});
+        addAirports(airports);
 
         trackUserAction();
       });
@@ -242,6 +286,7 @@ const Map = () => {
     return () => {
       mapRef.current?.remove();
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [fetchFlights, handleAircraftClick, handleMapClick]);
 
   // new effect to add airports
@@ -249,6 +294,7 @@ const Map = () => {
     if (airports.length > 0 && styleLoadedRef.current && mapRef.current) {
       addAirports(airports);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [airports]);
 
   // #endregion
@@ -306,9 +352,10 @@ const Map = () => {
 
   // #region Drawing
 
-  const addAirports = useCallback((airports: Airport[]) => {
+  const addAirports = (airports: Airport[]): void => {
     if (!mapRef.current || !styleLoadedRef.current || !airports.length) return;
 
+    // create GeoJSON data structure for airports
     const geoJsonData: FeatureCollection = {
       type: "FeatureCollection",
       features: airports.map((airport) => ({
@@ -321,7 +368,7 @@ const Map = () => {
           id: airport.icao,
           name: airport.name,
           city: airport.city,
-          hasATC: airport.atc.length > 0,
+          hasATC: airport.atc && airport.atc.length > 0,
           has3dBuildings: airport.has3dBuildings,
           class: airport.class,
           iata: airport.iata,
@@ -349,33 +396,101 @@ const Map = () => {
           type: "circle",
           source: "airports",
           paint: {
-            "circle-color": "#FF0000", // Red color for airports
-            "circle-radius": 6.5, // Fixed size for all airports
-            "circle-opacity": 0.6,
+            "circle-color": "#FF0000",
+            "circle-radius": 6.5,
+            "circle-opacity": 0.5,
             "circle-stroke-width": 2,
-            "circle-stroke-color": "#FFFFFF", // White border
+            "circle-stroke-color": "#FFFFFF",
           },
         });
 
-        // Add event listeners for airport features
-        //mapRef.current.on("click", "airports-layer", handleAirportClick as never);
+        mapRef.current.on(
+          "click",
+          "airports-layer",
+          airportMapClickHelper as never
+        );
         mapRef.current.on("mouseenter", "airports-layer", () => {
           if (mapRef.current)
             mapRef.current.getCanvas().style.cursor = "pointer";
         });
-
         mapRef.current.on("mouseleave", "airports-layer", () => {
           if (mapRef.current) mapRef.current.getCanvas().style.cursor = "";
         });
-
-
       } else {
         existingSource.setData(geoJsonData);
       }
+
+      const existingMarkers = document.querySelectorAll(
+        ".airport-marker-container"
+      );
+      existingMarkers.forEach((marker) => marker.remove());
+
+      const createElement = (
+        tagName: string,
+        className: string
+      ): HTMLElement => {
+        const element = document.createElement(tagName);
+        element.className = className;
+        return element;
+      };
+
+      // atc type mapping
+      const atcMapping: Record<number, string> = {
+        0: "G", // Ground
+        1: "T", // Tower
+        2: "U", // Unicom
+        3: "C", // Clearance
+        4: "A", // Approach
+        5: "D", // Departure
+        6: "C", // Center
+        7: "S", // ATIS
+        8: "", // Aircraft
+        9: "R", // Recorded
+        10: "", // Unknown
+        11: "", // Unused
+      };
+
+      airports.forEach((airport) => {
+        if (!airport.atc || airport.atc.length === 0) return;
+
+        // create custom elements for airport marker
+        const markerElement = createElement("div", "airport-marker-container");
+        const airportBox = createElement("div", "airport-marker");
+        const codeElement = createElement("div", "airport-code");
+        const servicesElement = createElement("div", "airport-services");
+
+        codeElement.textContent = airport.icao;
+
+        // build yellow service code string
+        const serviceCode = airport.atc
+          .map((service) => atcMapping[service.type] || "")
+          .filter((code) => code !== "")
+          .join("");
+
+        servicesElement.textContent = serviceCode;
+
+        airportBox.appendChild(codeElement);
+        airportBox.appendChild(servicesElement);
+        markerElement.appendChild(airportBox);
+
+        markerElement.addEventListener("click", () => {
+          handleAirportClick(airport.icao);
+        });
+
+        if (mapRef.current) {
+          new mapboxgl.Marker({
+            element: markerElement,
+            anchor: "bottom",
+            offset: [0, 0],
+          })
+            .setLngLat([airport.longitude, airport.latitude])
+            .addTo(mapRef.current);
+        }
+      });
     } catch (error) {
       console.error("Error adding airports layer:", error);
     }
-  }, []);
+  };
 
   /** Updates aircraft layer with fetched flight data */
   const updateAircraftLayer = (flights: Flights[]) => {

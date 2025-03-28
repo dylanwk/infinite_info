@@ -23,6 +23,7 @@ import { colourForAltitude, crossesAntiMeridian, feetToMetres } from "@/lib/util
 import DrawerProvider from "./FlightDrawer/DrawerProvider";
 import { useAirports } from "@/hooks/useAirports";
 import "../styles/globals.css";
+import AirportDrawer from "./AirportDrawer/AirportDrawer";
 
 const INACTIVITY_TIMEOUT_MS = 300000; // 5 minutes
 const REFRESH_INTERVAL_MS = 60000; // 1 minute
@@ -52,6 +53,8 @@ const Map = () => {
   const selectedSessionRef = useRef(selectedSession);
 
   const { airports, loading, error, getAirports } = useAirports(client);
+  const selectedAirportRef = useRef<Airport | null>(null);
+  const [selectedAirport, setSelectedAirport] = useState<Airport | null>(null);
 
   const [fetchFlights] = useLazyQuery(GET_FLIGHTS, {
     client,
@@ -95,13 +98,15 @@ const Map = () => {
 
   // #region Event Handlers
 
-  const handleDrawerClose = () => {
+  const handleFlightDrawerClose = () => {
     setDrawerExpanded(false);
     setSelectedFlight(null);
     setFlightPath(null);
   };
 
-  const handleDrawerOpen = () => setDrawerExpanded(true);
+  const handleAirportDrawerClose = () => {
+    setSelectedAirport(null);
+  };
 
   const handleAircraftHoverEnter = () => {
     mapRef.current!.getCanvas().style.cursor = "pointer";
@@ -175,6 +180,10 @@ const Map = () => {
       duration: 1500,
       essential: true
     });
+
+    setSelectedAirport(current_airport);
+    setSelectedFlight(null);
+    selectedAirportRef.current = current_airport;
   };
 
   const handleAircraftClick = useCallback(
@@ -183,6 +192,7 @@ const Map = () => {
         features: (Feature<LineString, GeoJsonProperties> | undefined)[];
       }
     ) => {
+      setSelectedAirport(null);
       const flightId = e.features?.[0]?.properties?.id as string | undefined;
       if (flightId) {
         setSelectedFlight(flightId);
@@ -202,6 +212,7 @@ const Map = () => {
   /** Handles clicking on the map (deselects aircraft) */
   const handleMapClick = useCallback(() => {
     setSelectedFlight(null);
+    setSelectedAirport(null);
     flightPathRef.current = null;
     setDrawerExpanded(false);
     setFlightPath(null);
@@ -429,7 +440,9 @@ const Map = () => {
         airportBox.appendChild(servicesElement);
         markerElement.appendChild(airportBox);
 
-        markerElement.addEventListener("click", () => {
+        markerElement.addEventListener("click", e => {
+          e.preventDefault();
+          e.stopPropagation();
           handleAirportClick(airport.icao);
         });
 
@@ -624,13 +637,15 @@ const Map = () => {
       {selectedFlight && (
         <>
           <DrawerProvider
-            handleOpen={handleDrawerOpen}
+            handleOpen={() => setDrawerExpanded(true)}
             flightId={selectedFlight}
             currentSession={selectedSession}
-            handleClose={handleDrawerClose}
+            handleClose={handleFlightDrawerClose}
           />
         </>
       )}
+
+      {selectedAirport && <AirportDrawer airport={selectedAirport} handleClose={handleAirportDrawerClose} />}
     </>
   );
   // #endregion

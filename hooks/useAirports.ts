@@ -13,7 +13,6 @@ export const useAirports = (client: ApolloClient<NormalizedCacheObject>) => {
     onCompleted: (data: AirportsQueryResponse["data"]) => {
       if (data?.airportsv2) {
         setAirports(data.airportsv2);
-        console.log("Airports:", data.airportsv2);
       }
     },
     onError: error => {

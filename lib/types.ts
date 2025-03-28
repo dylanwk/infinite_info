@@ -10,7 +10,6 @@ export type Session = {
   id: string;
 };
 
-// Main Airport type NEW
 export interface Airport {
   atc: ATC[];
   atis: string | null;
@@ -32,7 +31,6 @@ export interface Airport {
   timezone: string;
 }
 
-// ATC types NEW
 export interface ATC {
   atcRank: string;
   startTime: string;

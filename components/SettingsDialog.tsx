@@ -86,16 +86,18 @@ const SettingsDialog: React.FC<SettingsDialogProps> = ({
             <h3 className="text-xs text-slate-500 tracking-wide font-medium mb-2 uppercase">
               General
             </h3>
-            <div className="flex items-center justify-between p-3 bg-slate-50 rounded-xl">
-              <div className="flex items-center gap-2">Globe View</div>
-              <Switch
-                checked={isGlobeView}
-                onCheckedChange={handleProjChange}
-              />
-            </div>
-            <div className="flex items-center justify-between p-3 bg-slate-50 rounded-xl">
-              <div className="flex items-center gap-2">Show Track</div>
-              <Switch checked={showFPL} onCheckedChange={onFPLChange} />
+            <div className="bg-slate-50 rounded-xl">
+              <div className="flex items-center justify-between p-3">
+                <div className="flex items-center gap-2">Globe View</div>
+                <Switch
+                  checked={isGlobeView}
+                  onCheckedChange={handleProjChange}
+                />
+              </div>
+              <div className="flex items-center justify-between p-3">
+                <div className="flex items-center gap-2">Show Track</div>
+                <Switch checked={showFPL} onCheckedChange={onFPLChange} />
+              </div>
             </div>
           </div>
 

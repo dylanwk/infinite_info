@@ -1,7 +1,7 @@
 import { GET_AIRPORTS } from "@/lib/query";
 import { Airport, AirportQueryInput, AirportsQueryResponse } from "@/lib/types";
 import { ApolloClient, NormalizedCacheObject, useLazyQuery } from "@apollo/client";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 
 export const useAirports = (client: ApolloClient<NormalizedCacheObject>) => {
   const [airports, setAirports] = useState<Airport[]>([]);
@@ -10,14 +10,16 @@ export const useAirports = (client: ApolloClient<NormalizedCacheObject>) => {
 
   const [fetchAirports, { data, loading: queryLoading, error: queryError }] = useLazyQuery(GET_AIRPORTS, {
     client,
+    fetchPolicy: "cache-and-network",
     onCompleted: (data: AirportsQueryResponse["data"]) => {
       if (data?.airportsv2) {
         setAirports(data.airportsv2);
+      } else {
+        setAirports([])
       }
     },
     onError: error => {
       setError(error);
-      console.error("Error fetching airports:", error);
     }
   });
 
@@ -31,12 +33,19 @@ export const useAirports = (client: ApolloClient<NormalizedCacheObject>) => {
     }
   }, [queryError]);
 
-  const getAirports = (input: AirportQueryInput) => {
-    setLoading(true);
-    fetchAirports({
-      variables: { input }
-    });
-  };
+  const getAirports = useCallback((input: AirportQueryInput) => {
+
+    if (!input?.server) {
+      return;
+    }
+
+    try {
+      fetchAirports({ variables: { input } });
+    } catch (e) {
+      console.error("useAirports: Error trying to execute fetchAirportsQuery:", e);
+    }
+
+  }, [fetchAirports]);
 
   return {
     airports,

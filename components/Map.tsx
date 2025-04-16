@@ -3,7 +3,7 @@
 import React, { useRef, useEffect, useState, useCallback } from "react";
 import mapboxgl, { MapMouseEvent } from "mapbox-gl";
 import "mapbox-gl/dist/mapbox-gl.css";
-import { Airport, Flights, Track } from "@/lib/types";
+import { Airport, DEFAULT, Flights, MapStyle, Track } from "@/lib/types";
 import client from "@/lib/apolloClient";
 import { Feature, Point, LineString, GeoJsonProperties } from "geojson";
 
@@ -41,11 +41,13 @@ const Map = () => {
   const [selectedFlightId, setSelectedFlightId] = useState<string | null>(null);
   const [selectedAirport, setSelectedAirport] = useState<Airport | null>(null);
   const [drawerExpanded, setDrawerExpanded] = useState(false);
+
+  const [mapStyle, setMapStyle] = useState<MapStyle>(DEFAULT);
   // #endregion
 
   // #region Custom Hook Usage
 
-  const { map, isStyleLoaded, mapError } = useMapbox({ containerRef: mapContainerRef });
+  const { map, isStyleLoaded, setIsStyleLoaded, mapError } = useMapbox({ containerRef: mapContainerRef });
   const listenersAttachedRef = useRef(false);
 
   // --- Inactivity Timeout ---
@@ -124,6 +126,7 @@ const Map = () => {
   }, []);
 
   // --- Aircraft Layer Interactions ---
+
   const handleAircraftClick = useCallback(
     (e: MapMouseEvent & { features?: Feature<Point>[] }) => {
       if (!e.features?.length) return;
@@ -162,6 +165,20 @@ const Map = () => {
   // #endregion
 
   // #region Map Layer Updates
+
+  // refresh map on style change
+  useEffect(() => {
+    if (!map) return;
+
+    setIsStyleLoaded(false);
+    map.setStyle(mapStyle);
+
+    map.once("style.load", () => {
+      setIsStyleLoaded(true);
+      map.resize();
+    });
+
+  }, [mapStyle]);
 
   // fetch initial airports when map is ready
   useEffect(() => {
@@ -232,17 +249,22 @@ const Map = () => {
 
   return (
     <>
-      <MapHeader selectedSession={selectedSession} onSessionChange={setSelectedSession} />
+      <MapHeader
+        selectedSession={selectedSession}
+        onSessionChange={setSelectedSession}
+        mapStyle={mapStyle}
+        onMapStyleChange={setMapStyle}
+      />
       {/* Map container */}
       <div id="map-container" ref={mapContainerRef} className={"h-[100vh]"} />
       {!isStyleLoaded && (
-          <div className="absolute inset-0 flex items-center justify-center bg-black/20 backdrop-blur-sm z-50">
-            <div className="bg-white dark:bg-slate-900 p-4 rounded-lg shadow-lg flex flex-col items-center">
-              <Loader2 className="h-10 w-10 text-primary animate-spin mb-2" />
-              <span className="font-medium">Loading Map...</span>
-            </div>
+        <div className="absolute inset-0 flex items-center justify-center bg-black/20 backdrop-blur-sm z-50">
+          <div className="bg-white dark:bg-slate-900 p-4 rounded-lg shadow-lg flex flex-col items-center">
+            <Loader2 className="h-10 w-10 text-primary animate-spin mb-2" />
+            <span className="font-medium">Loading Map...</span>
           </div>
-        )}
+        </div>
+      )}
 
       {/* Inactivity Timeout Modal */}
       <Dialog open={isTimedOut}>
@@ -250,9 +272,7 @@ const Map = () => {
           <DialogHeader>
             <DialogTitle>Are you still there?</DialogTitle>
             <div className="my-1.5">
-              <DialogDescription>
-                You&apos;ve been inactive. Click Continue to keep the map live.
-              </DialogDescription>
+              <DialogDescription>You&apos;ve been inactive. Click Continue to keep the map live.</DialogDescription>
             </div>
           </DialogHeader>
           <DialogFooter>

@@ -2,6 +2,7 @@ import { useRef, useEffect, useState } from "react";
 import mapboxgl, { Map } from "mapbox-gl";
 import "mapbox-gl/dist/mapbox-gl.css";
 import { MAPBOX_STYLE } from "@/lib/constants";
+import { DEFAULT, MapStyle } from "@/lib/types";
 
 interface UseMapboxProps {
   containerRef: React.RefObject<HTMLDivElement>;
@@ -17,6 +18,7 @@ export const useMapbox = ({ containerRef, initialOptions }: UseMapboxProps) => {
     if (mapRef.current || !containerRef.current) return;
 
     mapboxgl.accessToken = process.env.NEXT_PUBLIC_ETHANS_MAPBOX_TOKEN || "";
+
     if (!mapboxgl.accessToken) {
       console.error("Mapbox Access Token is not set!");
       setMapError(new Error("Mapbox Access Token is missing."));
@@ -26,7 +28,7 @@ export const useMapbox = ({ containerRef, initialOptions }: UseMapboxProps) => {
     try {
       const map = new mapboxgl.Map({
         container: containerRef.current,
-        style: MAPBOX_STYLE,
+        style: DEFAULT,
         zoom: 1.8,
         maxZoom: 18,
         renderWorldCopies: false,
@@ -49,12 +51,12 @@ export const useMapbox = ({ containerRef, initialOptions }: UseMapboxProps) => {
       mapRef.current = map;
 
     } catch (error) {
-        console.error("Failed to initialize Mapbox map:", error);
-        if (error instanceof Error) {
-            setMapError(error);
-        } else {
-             setMapError(new Error("An unknown error occurred during map initialization."));
-        }
+      console.error("Failed to initialize Mapbox map:", error);
+      if (error instanceof Error) {
+        setMapError(error);
+      } else {
+        setMapError(new Error("An unknown error occurred during map initialization."));
+      }
     }
 
 
@@ -66,5 +68,5 @@ export const useMapbox = ({ containerRef, initialOptions }: UseMapboxProps) => {
     };
   }, [containerRef, initialOptions]);
 
-  return { map: mapRef.current, isStyleLoaded, mapError };
+  return { map: mapRef.current, isStyleLoaded, setIsStyleLoaded, mapError };
 };

@@ -17,54 +17,59 @@ interface MapHeaderProps {
 export const MapHeader: React.FC<MapHeaderProps> = ({ selectedSession, onSessionChange }) => {
   const [sessions, setSessions] = useState<Session[]>([]);
 
-  // Query hook for fetching sessions
-  const { loading, error } = useQuery(GET_SESSIONS, {
+  const { loading, error, data } = useQuery<{ sessionsv2: Session[] }>(GET_SESSIONS, {
     client,
-    onCompleted: (data: { sessionsv2: Session[] }) => {
-      if (data?.sessionsv2) {
-        setSessions(data.sessionsv2);
-      }
-    }
   });
 
+  // update sessions state when data is fetched successfully
   useEffect(() => {
-    if (sessions.length > 0 && !selectedSession) {
+    if (data?.sessionsv2) {
+      setSessions(data.sessionsv2);
+    }
+  }, [data]);
+
+  // handle the initial session selection
+  useEffect(() => {
+    if (sessions.length > 0 && !selectedSession && onSessionChange) {
       onSessionChange(sessions[0].id);
-      console.log(sessions[0].id);
     }
   }, [sessions, selectedSession, onSessionChange]);
 
-  // Memoized handler for session selection changes
+  // memoized handler for session selection changes
   const handleSessionChange = useCallback(
     (value: string) => {
       onSessionChange(value);
     },
-
-    [onSessionChange]
+    [onSessionChange] 
   );
 
   // Error handling
   if (error) {
     console.error("GraphQL Error:", error);
-    return <div className="absolute w-full bg-red-100 p-4 text-center text-red-600">Error loading sessions.</div>;
+    return <div className="absolute z-10 mt-2 w-full bg-red-100 p-4 text-center text-red-600">Error loading sessions. Please try again later.</div>;
   }
 
   return (
     <div className="absolute z-10 mt-2 w-full bg-transparent">
       <Container>
         <div className="flex flex-row items-center justify-between">
-          {loading ? (
-            <Select>
-              <SelectTrigger className="w-[180px] bg-gray-100">
-                <Loader2 />
-              </SelectTrigger>
-            </Select>
-          ) : (
-            <Select value={selectedSession} onValueChange={handleSessionChange}>
-              <SelectTrigger className="w-[180px] bg-gray-50 border-none shadow-lg">
+          <Select
+            value={selectedSession}
+            onValueChange={handleSessionChange}
+            disabled={loading || sessions.length === 0} // disabled while loading or if no sessions
+          >
+            <SelectTrigger className="w-[180px] bg-gray-50 border-none shadow-lg disabled:opacity-50">
+              {loading ? (
+                <div className="flex items-center">
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Loading...
+                </div>
+              ) : (
                 <SelectValue placeholder="Select a server" />
-              </SelectTrigger>
-              <SelectContent>
+              )}
+            </SelectTrigger>
+            <SelectContent>
+              {!loading && sessions.length > 0 ? (
                 <SelectGroup>
                   <SelectLabel>Servers</SelectLabel>
                   {sessions.map(session => (
@@ -73,12 +78,14 @@ export const MapHeader: React.FC<MapHeaderProps> = ({ selectedSession, onSession
                     </SelectItem>
                   ))}
                 </SelectGroup>
-              </SelectContent>
-            </Select>
-          )}
+              ) : (
+                !loading && <SelectItem value="no-servers" disabled>No servers available</SelectItem>
+              )}
+            </SelectContent>
+          </Select>
 
           <Link className="flex rounded-xl text-xl" href="/">
-            <Image src="/images/iilogo.svg" alt="Logo" width={100} height={100} priority />
+            <Image src="/images/iilogo.svg" alt="Company Logo - Link to Homepage" width={100} height={100} priority />
           </Link>
         </div>
       </Container>

@@ -12,7 +12,7 @@ const AirportDefaultContent: React.FC<AirportDefaultContent> = ({ airport }) => 
   const outboundCount = airport.outbounds?.length || 0;
 
   return (
-    <div className="sm:max-w-md p-0 overflow-y-auto mt-4 mb-4">
+    <div className="p-0 overflow-y-auto mt-4 mb-4">
       <div className="p-6 pt-0">
         <h3 className="text-sm text-slate-600 tracking-wide font-medium mb-2 uppercase">AIRPORT</h3>
 

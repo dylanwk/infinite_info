@@ -5,14 +5,9 @@ import SwipeableDrawer from "@mui/material/SwipeableDrawer";
 import { styled } from "@mui/material/styles";
 import { useTheme } from "@mui/material/styles";
 import useMediaQuery from "@mui/material/useMediaQuery";
-import { DrawerView, Flight } from "@/lib/types";
-import { Card, CardContent } from "../ui/card";
-import { ScrollArea } from "../ui/scroll-area";
-import DrawerHeader from "./content/DrawerHeader";
-import { CircleX, Loader2 } from "lucide-react";
-import { Button } from "../ui/button";
-import PremiumDialog from "../PremiumDialog";
-import { ApolloError } from "@apollo/client";
+import { Airport } from "@/lib/types";
+import AirportHeader from "./content/AirportHeader";
+import { AirportViewType } from "./AirportProvidor";
 
 // Styled components for the drawer
 const StyledDrawer = styled(SwipeableDrawer)(({ theme }) => ({
@@ -61,40 +56,25 @@ const DRAWER_HEIGHTS = {
   FULL: 90
 };
 
-interface MobileDrawerProps {
-  currentSession: string;
-  handleDrawerClose: () => void;
-  handleDrawerOpen: () => void;
-  flight: Flight | null;
-  loading: boolean;
-  error: ApolloError | undefined;
-  currentView: DrawerView;
-  isVerified: boolean;
-  openPremiumDialog: boolean;
-  handleClick: (value: DrawerView) => void;
-  getViewContent: () => JSX.Element | null;
-  drawerOpen: boolean;
+interface MobileAirportDrawerProps {
+  airport: Airport;
+  handleClose: () => void;
+  handleViewClick: (view: AirportViewType) => void;
   setDrawerOpen: (value: boolean) => void;
-  handleDialogClose: () => void;
+  drawerOpen: boolean;
+  getViewContent: () => JSX.Element | null;
 }
 
-export default function MobileDrawer({
-  handleDrawerClose: handleClose,
-  handleDialogClose,
-  flight,
-  loading,
-  error,
-  currentView,
-  isVerified,
-  openPremiumDialog,
-  handleClick,
-  getViewContent,
+const MobileAirportDrawer: React.FC<MobileAirportDrawerProps> = ({
+  setDrawerOpen,
   drawerOpen,
-  setDrawerOpen
-}: MobileDrawerProps) {
+  airport,
+  handleClose,
+  handleViewClick,
+  getViewContent
+}) => {
   const [drawerHeight, setDrawerHeight] = useState(DRAWER_HEIGHTS.COLLAPSED);
 
-  // mobile / theme vars
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
   const drawerRef = useRef<HTMLDivElement | null>(null);
@@ -164,7 +144,7 @@ export default function MobileDrawer({
     snapToHeight();
   };
 
-  // Set up the drawer's touch events and handle paper element height
+  // drawer's touch events and handle paper element height
   useEffect(() => {
     const paperElement = drawerRef.current?.querySelector(".MuiDrawer-paper") as HTMLElement;
 
@@ -172,34 +152,23 @@ export default function MobileDrawer({
       paperElement.style.height = `${drawerHeight}vh`;
     }
 
-    // Create a parent-level touchmove handler that can safely prevent default
     const preventDefaultForDrawer = (e: TouchEvent) => {
-      // Only prevent default if we're actively dragging the drawer
       if (touchStartY.current !== null) {
         e.preventDefault();
       }
     };
 
-    // Add the event listener with the non-passive option
     document.addEventListener("touchmove", preventDefaultForDrawer, {
       passive: false
     });
 
-    // Clean up event listener on component unmount
     return () => {
       document.removeEventListener("touchmove", preventDefaultForDrawer);
     };
   }, [drawerHeight, drawerOpen]);
 
   return (
-    <>
-      {openPremiumDialog && <div className="fixed inset-0 bg-background/80 backdrop-blur-sm z-50" aria-hidden="true" />}
-
-      {/* Premium dialog with higher z-index */}
-      <div className="relative z-[60]">
-        <PremiumDialog open={openPremiumDialog} onClose={handleDialogClose} />
-      </div>
-
+    <div>
       <StyledDrawer
         anchor="bottom"
         open={drawerOpen}
@@ -225,59 +194,13 @@ export default function MobileDrawer({
           onTouchEnd={handleTouchEnd}
           style={{ touchAction: "none" }}
         />
-        <DrawerContent>
-          <ScrollArea className="h-full">
-            <div className="p-4 space-y-4">
-              <div className="flex justify-between items-center mt-2">
-                <h2 className="text-3xl font-bold">{flight?.callsign || "Flight Details"}</h2>
-                <Button variant="ghost" className="rounded-full" onClick={handleClose}>
-                  <CircleX />
-                </Button>
-              </div>
-
-              {loading ? (
-                <div className="flex items-center justify-center h-48">
-                  <Loader2 className="h-8 w-8 animate-spin" />
-                </div>
-              ) : error ? (
-                <Card className="bg-red-50">
-                  <CardContent className="p-4">
-                    <p className="text-red-600">Error: {error.message}</p>
-                  </CardContent>
-                </Card>
-              ) : flight ? (
-                <>
-                  <DrawerHeader
-                    username={flight.username}
-                    aircraft={flight.aircraft}
-                    altitude={flight.altitude}
-                    heading={flight.heading}
-                    speed={flight.speed}
-                    vs={flight.verticalSpeed}
-                    livery={flight.livery}
-                    handleClick={handleClick}
-                    currentView={currentView}
-                    isVerified={isVerified}
-                  />
-
-                  {getViewContent()}
-                </>
-              ) : (
-                <Card className="bg-yellow-50">
-                  <CardContent className="p-4">
-                    <p className="text-yellow-600">No flight data available</p>
-                  </CardContent>
-                </Card>
-              )}
-            </div>
-          </ScrollArea>
-          <div className="flex w-full p-4">
-            <Button variant="outline" size="sm" onClick={handleClose} className="w-full">
-              Close
-            </Button>
-          </div>
+        <DrawerContent className="flex flex-col h-full -mt-3">
+          <AirportHeader airport={airport} handleClose={handleClose} handleViewClick={handleViewClick} />
+          <div className="flex-1 overflow-y-auto mt-3">{getViewContent()}</div>
         </DrawerContent>
       </StyledDrawer>
-    </>
+    </div>
   );
-}
+};
+
+export default MobileAirportDrawer;

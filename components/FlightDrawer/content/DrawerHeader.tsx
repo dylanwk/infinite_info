@@ -1,5 +1,5 @@
 import React from "react";
-import { Button } from "../ui/button";
+import { Button } from "@/components/ui/button";
 import { ChartNetwork, Map } from "lucide-react";
 import PermIdentityIcon from "@mui/icons-material/PermIdentity";
 import FlightIcon from "@mui/icons-material/Flight";

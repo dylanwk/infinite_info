@@ -19,7 +19,7 @@ import {
 import { Button } from "./ui/button";
 import { MapHeader } from "./MapHeader";
 import DrawerProvider from "./FlightDrawer/DrawerProvider";
-import AirportDrawer from "./AirportDrawer/AirportDrawer";
+import AirportProvider from "./AirportDrawer/AirportProvidor";
 import { Loader2 } from "lucide-react";
 
 // Custom Hooks
@@ -251,7 +251,6 @@ const Map = () => {
             <DialogTitle>Are you still there?</DialogTitle>
             <div className="my-1.5">
               <DialogDescription>
-                {/* Updated text */}
                 You&apos;ve been inactive. Click Continue to keep the map live.
               </DialogDescription>
             </div>
@@ -279,7 +278,7 @@ const Map = () => {
 
       {/* Airport Details Drawer */}
       {selectedAirport && (
-        <AirportDrawer key={selectedAirport.icao} airport={selectedAirport} handleClose={handleAirportDrawerClose} />
+        <AirportProvider key={selectedAirport.icao} airport={selectedAirport} handleClose={handleAirportDrawerClose} />
       )}
 
       {(flightsError || airportsError || flightPathError) && (

@@ -1,7 +1,6 @@
-import React, { useMemo } from 'react';
-import { Plane, ArrowUp, ArrowDown } from 'lucide-react';
-import { GQL_Track_Type } from '@/lib/types';
-
+import React, { useMemo } from "react";
+import { Plane, ArrowUp, ArrowDown } from "lucide-react";
+import { GQL_Track_Type } from "@/lib/types";
 
 // A more readable version of the track point for our component
 type ProcessedTrackPoint = {
@@ -15,13 +14,13 @@ type ProcessedTrackPoint = {
 
 // Flight phases
 enum FlightPhase {
-  GROUND = 'ground',
-  TAKEOFF = 'takeoff',
-  CLIMB = 'climb',
-  CRUISE = 'cruise',
-  DESCENT = 'descent',
-  APPROACH = 'approach',
-  LANDING = 'landing',
+  GROUND = "ground",
+  TAKEOFF = "takeoff",
+  CLIMB = "climb",
+  CRUISE = "cruise",
+  DESCENT = "descent",
+  APPROACH = "approach",
+  LANDING = "landing"
 }
 
 interface FlightProgressBarProps {
@@ -33,12 +32,12 @@ export function FlightProgressBar({ track, callsign }: FlightProgressBarProps) {
   // Process the track data to determine flight phases and progress
   const { processedTrack, currentPoint, totalDuration, elapsedTime, completionPercentage } = useMemo(() => {
     if (!track || track.length === 0) {
-      return { 
-        processedTrack: [], 
-        currentPoint: null, 
-        totalDuration: 0, 
+      return {
+        processedTrack: [],
+        currentPoint: null,
+        totalDuration: 0,
         elapsedTime: 0,
-        completionPercentage: 0 
+        completionPercentage: 0
       };
     }
 
@@ -51,7 +50,7 @@ export function FlightProgressBar({ track, callsign }: FlightProgressBarProps) {
     const processed: ProcessedTrackPoint[] = sortedTrack.map((point, index) => {
       // Determine flight phase based on altitude, speed, and vertical speed
       let phase: FlightPhase;
-      
+
       if (point.s < 30) {
         // On ground if speed is very low
         phase = FlightPhase.GROUND;
@@ -73,7 +72,7 @@ export function FlightProgressBar({ track, callsign }: FlightProgressBarProps) {
         // Cruising otherwise
         phase = FlightPhase.CRUISE;
       }
-      
+
       // If it's the last point and on ground, it's landed
       if (index === sortedTrack.length - 1 && phase === FlightPhase.GROUND) {
         phase = FlightPhase.LANDING;
@@ -85,7 +84,7 @@ export function FlightProgressBar({ track, callsign }: FlightProgressBarProps) {
         verticalSpeed: point.v,
         reportedTime: new Date(point.r),
         phase,
-        position: 0, // Will calculate later
+        position: 0 // Will calculate later
       };
     });
 
@@ -93,7 +92,7 @@ export function FlightProgressBar({ track, callsign }: FlightProgressBarProps) {
     const startTime = processed[0].reportedTime.getTime();
     const endTime = processed[processed.length - 1].reportedTime.getTime();
     const totalDuration = endTime - startTime;
-    
+
     // Calculate position for each point (0-100%)
     processed.forEach((point, index) => {
       const elapsed = point.reportedTime.getTime() - startTime;
@@ -102,18 +101,18 @@ export function FlightProgressBar({ track, callsign }: FlightProgressBarProps) {
 
     // Get the most recent point
     const currentPoint = processed[processed.length - 1];
-    
+
     // Calculate elapsed time and completion percentage
     const now = new Date().getTime();
     const elapsedTime = Math.min(now - startTime, totalDuration);
     const completionPercentage = totalDuration > 0 ? (elapsedTime / totalDuration) * 100 : 0;
 
-    return { 
-      processedTrack: processed, 
-      currentPoint, 
-      totalDuration, 
+    return {
+      processedTrack: processed,
+      currentPoint,
+      totalDuration,
       elapsedTime,
-      completionPercentage: Math.min(completionPercentage, 100) 
+      completionPercentage: Math.min(completionPercentage, 100)
     };
   }, [track]);
 
@@ -137,14 +136,22 @@ export function FlightProgressBar({ track, callsign }: FlightProgressBarProps) {
   // Get phase name for display
   const getPhaseLabel = (phase: FlightPhase) => {
     switch (phase) {
-      case FlightPhase.GROUND: return "On Ground";
-      case FlightPhase.TAKEOFF: return "Takeoff";
-      case FlightPhase.CLIMB: return "Climbing";
-      case FlightPhase.CRUISE: return "Cruising";
-      case FlightPhase.DESCENT: return "Descending";
-      case FlightPhase.APPROACH: return "Approach";
-      case FlightPhase.LANDING: return "Landing";
-      default: return "In Flight";
+      case FlightPhase.GROUND:
+        return "On Ground";
+      case FlightPhase.TAKEOFF:
+        return "Takeoff";
+      case FlightPhase.CLIMB:
+        return "Climbing";
+      case FlightPhase.CRUISE:
+        return "Cruising";
+      case FlightPhase.DESCENT:
+        return "Descending";
+      case FlightPhase.APPROACH:
+        return "Approach";
+      case FlightPhase.LANDING:
+        return "Landing";
+      default:
+        return "In Flight";
     }
   };
 
@@ -191,50 +198,51 @@ export function FlightProgressBar({ track, callsign }: FlightProgressBarProps) {
           {formatDuration(elapsedTime)} / {formatDuration(totalDuration)}
         </div>
       </div>
-      
+
       {/* Progress bar container */}
       <div className="h-4 bg-gray-200 rounded-full overflow-hidden relative">
         {/* Background segments showing different flight phases */}
         {processedTrack.map((point, index) => {
           // Skip the first point as it has no width
           if (index === 0) return null;
-          
+
           const prevPoint = processedTrack[index - 1];
           const width = point.position - prevPoint.position;
-          
+
           return (
-            <div 
+            <div
               key={index}
               className={`absolute h-full ${getProgressColor(prevPoint.phase)}`}
-              style={{ 
-                left: `${prevPoint.position}%`, 
-                width: `${width}%` 
+              style={{
+                left: `${prevPoint.position}%`,
+                width: `${width}%`
               }}
             />
           );
         })}
-        
+
         {/* Progress indicator */}
-        <div 
+        <div
           className="h-full bg-white bg-opacity-30"
           style={{ width: `${100 - completionPercentage}%`, marginLeft: `${completionPercentage}%` }}
         />
-        
+
         {/* Airplane indicator */}
-        <div 
-          className="absolute top-1/2 transform -translate-y-1/2"
-          style={{ left: `${completionPercentage}%` }}
-        >
+        <div className="absolute top-1/2 transform -translate-y-1/2" style={{ left: `${completionPercentage}%` }}>
           <div className="w-6 h-6 bg-white rounded-full shadow-md flex items-center justify-center -ml-3">
-            <Plane 
-              size={14} 
+            <Plane
+              size={14}
               className="text-blue-600"
-              style={{ transform: `rotate(${currentPoint?.phase === FlightPhase.DESCENT || currentPoint?.phase === FlightPhase.APPROACH ? 315 : 45}deg)` }}
+              style={{
+                transform: `rotate(${
+                  currentPoint?.phase === FlightPhase.DESCENT || currentPoint?.phase === FlightPhase.APPROACH ? 315 : 45
+                }deg)`
+              }}
             />
           </div>
         </div>
       </div>
-      
+
       {/* Current status */}
       <div className="flex items-center mt-3 justify-between">
         <div className="flex items-center">
@@ -243,21 +251,24 @@ export function FlightProgressBar({ track, callsign }: FlightProgressBarProps) {
             {currentPoint ? getPhaseLabel(currentPoint.phase) : "Unknown"}
           </span>
         </div>
-        <div className="text-sm text-gray-600">
-          {Math.round(completionPercentage)}% Complete
-        </div>
+        <div className="text-sm text-gray-600">{Math.round(completionPercentage)}% Complete</div>
       </div>
-      
+
       {/* Origin and destination */}
       <div className="flex justify-between mt-2 text-xs text-gray-600">
-        <div>{processedTrack[0]?.reportedTime.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</div>
-        <div>{processedTrack[processedTrack.length-1]?.reportedTime.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</div>
+        <div>{processedTrack[0]?.reportedTime.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</div>
+        <div>
+          {processedTrack[processedTrack.length - 1]?.reportedTime.toLocaleTimeString([], {
+            hour: "2-digit",
+            minute: "2-digit"
+          })}
+        </div>
       </div>
-      
+
       {/* Airport codes */}
       <div className="flex justify-between text-xs font-semibold">
-        <div>{track[0]?.i?.split(':')[0] || 'N/A'}</div>
-        <div>{track[track.length-1]?.i?.split(':')[0] || 'N/A'}</div>
+        <div>{track[0]?.i?.split(":")[0] || "N/A"}</div>
+        <div>{track[track.length - 1]?.i?.split(":")[0] || "N/A"}</div>
       </div>
     </div>
   );

@@ -3,9 +3,9 @@ import { GET_FLIGHT } from "@/lib/query";
 import { DrawerView, Flight, GQL_Track_Type } from "@/lib/types";
 import { useLazyQuery } from "@apollo/client";
 import { useCallback, useEffect, useState } from "react";
-import { GraphContent } from "./GraphContent";
-import { FPLContent } from "./FPLContent";
-import DefaultContent from "./DefaultContent";
+import { GraphContent } from "./content/GraphContent";
+import { FPLContent } from "./content/FPLContent";
+import DefaultContent from "./content/DefaultContent";
 import DesktopDrawer from "./DesktopDrawer";
 import useMediaQuery from "@mui/material/useMediaQuery";
 import MobileDrawer from "./MobileDrawer";
@@ -26,7 +26,7 @@ const useFlightData = (flightId: string | null, currentSession: string) => {
 
   const [getFlightInfo, { loading, error }] = useLazyQuery(GET_FLIGHT, {
     client,
-    onCompleted: (data) => {
+    onCompleted: data => {
       if (data?.flightv2) {
         const flightData: Flight = {
           latitude: parseFloat(data.flightv2.latitude),
@@ -43,12 +43,12 @@ const useFlightData = (flightId: string | null, currentSession: string) => {
           org: data.flightv2.org,
           livery: data.flightv2.livery,
           landingTimes: data.flightv2.landingTimes,
-          takeoffTimes: data.flightv2.takeoffTimes,
+          takeoffTimes: data.flightv2.takeoffTimes
         };
         setTrack(data.flightv2.track);
         setFlight(flightData);
       }
-    },
+    }
   });
 
   return {
@@ -56,7 +56,7 @@ const useFlightData = (flightId: string | null, currentSession: string) => {
     track,
     loading,
     error,
-    getFlightInfo,
+    getFlightInfo
   };
 };
 
@@ -75,13 +75,12 @@ const useDrawerView = (flight: Flight | null) => {
 
   // Handle premium dialog visibility
   useEffect(() => {
-    const isPremiumView =
-      currentView === "graph" || currentView === "flight-plan";
+    const isPremiumView = currentView === "graph" || currentView === "flight-plan";
     setOpenPremiumDialog(isPremiumView && !isVerified);
   }, [currentView, isVerified]);
 
   const handleClick = useCallback((value: DrawerView) => {
-    setCurrentView((prevView) => (prevView === value ? "default" : value));
+    setCurrentView(prevView => (prevView === value ? "default" : value));
   }, []);
 
   const handleDialogClose = useCallback(() => {
@@ -95,38 +94,24 @@ const useDrawerView = (flight: Flight | null) => {
     isVerified,
     openPremiumDialog,
     handleClick,
-    handleDialogClose,
+    handleDialogClose
   };
 };
 
-export default function DrawerProvider({
-  flightId,
-  currentSession,
-  handleClose,
-  handleOpen,
-}: DrawerProviderProps) {
+export default function DrawerProvider({ flightId, currentSession, handleClose, handleOpen }: DrawerProviderProps) {
   const isMobile = useMediaQuery("(max-width: 768px)");
   const [drawerOpen, setDrawerOpen] = useState(false);
 
   // Custom hooks for data and state management
-  const { flight, track, loading, error, getFlightInfo } = useFlightData(
-    flightId,
-    currentSession
-  );
-  const {
-    currentView,
-    isVerified,
-    openPremiumDialog,
-    handleClick,
-    handleDialogClose,
-  } = useDrawerView(flight);
+  const { flight, track, loading, error, getFlightInfo } = useFlightData(flightId, currentSession);
+  const { currentView, isVerified, openPremiumDialog, handleClick, handleDialogClose } = useDrawerView(flight);
 
   // Fetch flight data when flightId or session changes
   useEffect(() => {
     if (flightId) {
       setDrawerOpen(true);
       getFlightInfo({
-        variables: { input: { id: flightId, session: currentSession } },
+        variables: { input: { id: flightId, session: currentSession } }
       });
       handleOpen();
     } else {
@@ -140,21 +125,14 @@ export default function DrawerProvider({
     switch (currentView) {
       case "graph":
         if (!isVerified) return null;
-        return (
-          <GraphContent
-            tracks={track}
-            callsign={flight.callsign || "Anonymous"}
-          />
-        );
+        return <GraphContent tracks={track} callsign={flight.callsign || "Anonymous"} />;
 
       case "flight-plan":
         if (!isVerified) return null;
         return <FPLContent id={flight.id} />;
 
       default:
-        return (
-          <DefaultContent currentSession={currentSession} flight={flight} />
-        );
+        return <DefaultContent currentSession={currentSession} flight={flight} />;
     }
   }, [currentView, flight, isVerified, track, currentSession]);
 
@@ -169,7 +147,7 @@ export default function DrawerProvider({
     handleClick,
     loading,
     error,
-    getViewContent,
+    getViewContent
   };
 
   return isMobile ? (

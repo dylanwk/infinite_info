@@ -1,22 +1,12 @@
 "use client";
 
-import { useRef, useEffect, useState, useCallback } from "react";
-import mapboxgl, {
-  GeoJSONSource,
-  GeoJSONSourceSpecification,
-  MapMouseEvent,
-} from "mapbox-gl";
+import React, { useRef, useEffect, useState, useCallback } from "react";
+import mapboxgl, { MapMouseEvent } from "mapbox-gl";
 import "mapbox-gl/dist/mapbox-gl.css";
-import { DEFAULT, Flights, GQL_Track_Type, MapStyle, Track } from "@/lib/types";
-import { useLazyQuery } from "@apollo/client";
-import { GET_FLIGHTS, GET_FLIGHTPATH } from "@/lib/query";
+import { Airport, DEFAULT, Flights, MapStyle, Track } from "@/lib/types";
 import client from "@/lib/apolloClient";
-import {
-  Feature,
-  GeoJsonProperties,
-  LineString,
-  FeatureCollection,
-} from "geojson";
+import { Feature, Point, LineString, GeoJsonProperties } from "geojson";
+
 import {
   Dialog,
   DialogClose,
@@ -24,521 +14,310 @@ import {
   DialogDescription,
   DialogFooter,
   DialogHeader,
-  DialogTitle,
+  DialogTitle
 } from "./ui/dialog";
 import { Button } from "./ui/button";
 import { MapHeader } from "./MapHeader";
-import {
-  colourForAltitude,
-  crossesAntiMeridian,
-  feetToMetres,
-} from "@/lib/utils";
 import DrawerProvider from "./FlightDrawer/DrawerProvider";
+import AirportProvider from "./AirportDrawer/AirportProvidor";
+import { Loader2 } from "lucide-react";
 
-const INACTIVITY_TIMEOUT_MS = 300000; // 5 minutes
-const REFRESH_INTERVAL_MS = 60000; // 1 minute
-const MAPBOX_STYLE = "mapbox://styles/ethaaan/cldfgnal3000201nyv4534tvx/draft";
+// Custom Hooks
+import { useAirports } from "@/hooks/useAirports";
+import { useMapbox } from "@/hooks/useMapbox";
+import { useFlightsData } from "@/hooks/useFlightsData";
+import { useFlightPathData } from "@/hooks/useFlightpathData";
+import { useTimeout } from "@/hooks/useTimeout";
 
-const AIRCRAFT_ZOOM = 5; // Zoom level when centering on aircraft
+import { addOrUpdateAirportsLayer, addOrUpdateAircraftLayer, addOrUpdateFlightPathLayer } from "@/lib/mapUtils";
+import { AIRCRAFT_ZOOM, AIRPORT_ZOOM } from "@/lib/constants";
+
+import "../styles/globals.css";
 
 const Map = () => {
-  // #region State and Refs
+  // #region Refs and State
   const mapContainerRef = useRef<HTMLDivElement>(null);
-  const mapRef = useRef<mapboxgl.Map | null>(null);
-  const styleLoadedRef = useRef<boolean>(false);
-  const aircraftDataSourceRef = useRef<GeoJSONSource | null>(null);
-  const flightsRef = useRef<Flights[]>([]);
-
-  const [drawerExpanded, setDrawerExpanded] = useState(false);
-  const [selectedFlight, setSelectedFlight] = useState<string | null>(null);
-  const selectedFlightRef = useRef<string | null>(null);
-
-  const flightPathRef = useRef<Track[] | null>(null);
-  const [flightPath, setFlightPath] = useState<Track[] | null>(null);
-
-  const timeoutModalState = useRef(false);
-  const [timeoutModal, setTimeoutModal] = useState(false);
-  const activityTimerRef = useRef(new Date());
-
   const [selectedSession, setSelectedSession] = useState<string>("");
-  const selectedSessionRef = useRef(selectedSession);
+  const [selectedFlightId, setSelectedFlightId] = useState<string | null>(null);
+  const [selectedAirport, setSelectedAirport] = useState<Airport | null>(null);
+  const [drawerExpanded, setDrawerExpanded] = useState(false);
 
   const [mapStyle, setMapStyle] = useState<MapStyle>(DEFAULT);
+  // #endregion
 
-  const [fetchFlights] = useLazyQuery(GET_FLIGHTS, {
-    client,
-    fetchPolicy: "network-only",
-    onCompleted: (data: { flightsv2: Flights[] }) => {
-      if (data?.flightsv2) {
-        flightsRef.current = data.flightsv2;
-        updateAircraftLayer(data.flightsv2);
-      }
-    },
+  // #region Custom Hook Usage
+
+  const { map, isStyleLoaded, setIsStyleLoaded, mapError } = useMapbox({ containerRef: mapContainerRef });
+  const listenersAttachedRef = useRef(false);
+
+  // --- Inactivity Timeout ---
+  const { isTimedOut, handleContinue: handleTimeoutContinue } = useTimeout();
+
+  // --- Airport Data ---
+  const { airports, loading: airportsLoading, error: airportsError, getAirports } = useAirports(client);
+
+  // --- Flights Data ---
+  const {
+    flights,
+    loading: flightsLoading,
+    error: flightsError
+  } = useFlightsData({
+    session: selectedSession,
+    isMapReady: isStyleLoaded,
+    isPaused: isTimedOut
   });
 
-  const [fetchFlightPath] = useLazyQuery(GET_FLIGHTPATH, {
-    client,
-    onCompleted: (data: { flightv2: { track: GQL_Track_Type[] } }) => {
-      if (data?.flightv2) {
-        // must hard convert type to change attribute names. ex: b -> longitude
-        const convertAttributeNames = (track: GQL_Track_Type[]): Track[] => {
-          return track.map((item) => ({
-            altitude: item.a,
-            latitude: item.b,
-            longitude: item.c,
-            heading: item.h,
-            nearestAirport: item.i,
-            reportedTime: item.r,
-            speed: item.s,
-            verticalSpeed: item.v,
-            aircraftState: item.z,
-          }));
-        };
-
-        const convertedFlightPath = convertAttributeNames(data.flightv2.track);
-
-        flightPathRef.current = convertedFlightPath;
-        setFlightPath(convertedFlightPath);
-      }
-    },
+  // --- Flight Path Data ---
+  const {
+    flightPath,
+    loading: flightPathLoading,
+    error: flightPathError
+  } = useFlightPathData({
+    flightId: selectedFlightId,
+    session: selectedSession
   });
 
   // #endregion
 
   // #region Event Handlers
 
-  const handleMapStyleChange = (style: MapStyle) => {
-    setMapStyle(style);
-    trackUserAction();
-  };
-
-  const handleDrawerClose = () => {
-    setDrawerExpanded(false);
-    setSelectedFlight(null);
-    setFlightPath(null);
-  };
-
-  const handleDrawerOpen = () => setDrawerExpanded(true);
-
-  const handleAircraftHoverEnter = () => {
-    mapRef.current!.getCanvas().style.cursor = "pointer";
-  };
-
-  const handleAircraftHoverExit = () => {
-    mapRef.current!.getCanvas().style.cursor = "";
-  };
-
-  useEffect(() => {
-    if (!selectedFlight || !flightPath) {
-      addFlightPositions([]);
-    }
-
-    addFlightPositions(flightPath || []);
-  }, [flightPath, selectedFlight]);
-
-  // Function to center map on the selected flight
-  const centerMapOnSelectedFlight = (flightId: string | null) => {
-    if (!flightId || !mapRef.current) return;
-
-    // Find the flight in the current flights data
-    const flight = flightsRef.current.find((f) => f.id === flightId);
-
-    if (flight) {
-      // Fly to the aircraft position with animation
-      mapRef.current.flyTo({
-        center: [flight.longitude, flight.latitude],
-        zoom: AIRCRAFT_ZOOM,
+  const centerMapOnCoords = useCallback(
+    (coords: [number, number], zoom: number) => {
+      map?.flyTo({
+        center: coords,
+        zoom: zoom,
         duration: 1500,
-        essential: true,
+        essential: true
       });
-    }
-  };
-
-  const handleAircraftClick = useCallback(
-    (
-      e: MapMouseEvent & {
-        features: (Feature<LineString, GeoJsonProperties> | undefined)[];
-      }
-    ) => {
-      const flightId = e.features?.[0]?.properties?.id as string | undefined;
-      if (flightId) {
-        setSelectedFlight(flightId);
-        selectedFlightRef.current = flightId;
-      }
-      centerMapOnSelectedFlight(selectedFlightRef.current);
-      fetchFlightPath({
-        variables: {
-          input: { id: flightId, session: selectedSessionRef.current },
-        },
-      });
-      trackUserAction();
     },
-    [fetchFlightPath]
+    [map]
   );
 
-  /** Handles clicking on the map (deselects aircraft) */
-  const handleMapClick = useCallback(() => {
-    setSelectedFlight(null);
-    flightPathRef.current = null;
+  // --- Airport Layer Interactions ---
+
+  const handleAirportClick = useCallback(
+    (icao: string) => {
+      const clickedAirport = airports.find(a => a.icao === icao);
+
+      if (clickedAirport) {
+        setSelectedFlightId(null);
+        setDrawerExpanded(false);
+        setSelectedAirport(clickedAirport);
+
+        if (typeof clickedAirport.latitude === "number" && typeof clickedAirport.longitude === "number") {
+          centerMapOnCoords([clickedAirport.longitude, clickedAirport.latitude], AIRPORT_ZOOM);
+        } else {
+          console.warn("Invalid coordinates for selected airport:", clickedAirport);
+        }
+      } else {
+        console.warn(`Airport with ICAO ${icao} not found in current data.`);
+      }
+    },
+    [airports, centerMapOnCoords]
+  );
+
+  const handleFlightDrawerClose = useCallback(() => {
     setDrawerExpanded(false);
-    setFlightPath(null);
-    trackUserAction();
+    setSelectedFlightId(null);
   }, []);
 
-  // #region Effects
+  const handleAirportDrawerClose = useCallback(() => {
+    setSelectedAirport(null);
+  }, []);
 
+  // --- Aircraft Layer Interactions ---
+
+  const handleAircraftClick = useCallback(
+    (e: MapMouseEvent & { features?: Feature<Point>[] }) => {
+      if (!e.features?.length) return;
+
+      const flightId = e.features[0]?.properties?.id as string | undefined;
+      const coords = e.features[0]?.geometry.coordinates as number[] | undefined;
+
+      if (flightId) {
+        setSelectedAirport(null);
+        setSelectedFlightId(flightId);
+        setDrawerExpanded(true);
+
+        if (coords) {
+          centerMapOnCoords([coords[0], coords[1]], AIRCRAFT_ZOOM);
+        }
+      }
+    },
+    [centerMapOnCoords]
+  );
+
+  const handleAircraftHoverEnter = useCallback(() => {
+    if (map) map.getCanvas().style.cursor = "pointer";
+  }, [map]);
+
+  const handleAircraftHoverExit = useCallback(() => {
+    if (map) map.getCanvas().style.cursor = "";
+  }, [map]);
+
+  // --- General Map Interactions ---
+  const handleMapClick = useCallback(() => {
+    setSelectedFlightId(null);
+    setSelectedAirport(null);
+    setDrawerExpanded(false);
+  }, []);
+
+  // #endregion
+
+  // #region Map Layer Updates
+
+  // refresh map on style change
   useEffect(() => {
-    if (!mapRef.current) return;
+    if (!map) return;
 
-    // Save current state
-    const currentCenter = mapRef.current.getCenter();
-    const currentZoom = mapRef.current.getZoom();
-    const currentBearing = mapRef.current.getBearing();
-    const currentPitch = mapRef.current.getPitch();
+    setIsStyleLoaded(false);
+    map.setStyle(mapStyle);
 
-    // Reset styles loaded flag
-    styleLoadedRef.current = false;
-
-    // Set new style
-    mapRef.current.setStyle(mapStyle);
-
-    // Re-add the event listener for style.load
-    mapRef.current.once("style.load", () => {
-      styleLoadedRef.current = true;
-
-      // Reset view state
-      mapRef.current?.jumpTo({
-        center: currentCenter,
-        zoom: currentZoom,
-        bearing: currentBearing,
-        pitch: currentPitch,
-      });
-
-      // Re-add data sources and layers
-      if (flightsRef.current.length > 0) {
-        updateAircraftLayer(flightsRef.current);
-        console.log("updating aircraft layer");
-      }
-
-      if (flightPathRef.current) {
-        addFlightPositions(flightPathRef.current);
-      }
-
-      mapRef.current?.resize();
+    map.once("style.load", () => {
+      setIsStyleLoaded(true);
+      map.resize();
     });
+
   }, [mapStyle]);
 
+  // fetch initial airports when map is ready
   useEffect(() => {
-    selectedSessionRef.current = selectedSession;
-  }, [selectedSession]);
+    if (isStyleLoaded && selectedSession) {
+      console.log("effect hit with ", selectedSession);
 
-  useEffect(() => {
-    if (styleLoadedRef.current && selectedSession) {
-      fetchFlights({ variables: { input: { session: selectedSession } } });
+      getAirports({ server: selectedSession });
+    } else {
+      console.log("No session selected, skipping airport fetch.");
     }
-  }, [selectedSession, fetchFlights]);
+  }, [isStyleLoaded, getAirports, selectedSession]);
 
+  // add/update Airports layer and markers
   useEffect(() => {
-    if (mapContainerRef.current) {
-      mapboxgl.accessToken = process.env.NEXT_PUBLIC_ETHANS_MAPBOX_TOKEN || "";
-
-      mapRef.current = new mapboxgl.Map({
-        container: mapContainerRef.current,
-        style: mapStyle,
-        zoom: 1.8,
-        maxZoom: 18,
-        renderWorldCopies: false, // don't render multiple world copies
-        attributionControl: false, // Removed Mapbox attribution
-        preserveDrawingBuffer: false, // don't preserve drawing buffer
-      });
-
-      // Event listeners
-      mapRef.current.on("click", handleMapClick);
-      mapRef.current.on(
-        "click",
-        "aircraft-layer",
-        handleAircraftClick as never
-      ); // Type assertion required
-      mapRef.current.on(
-        "mouseenter",
-        "aircraft-layer",
-        handleAircraftHoverEnter
-      );
-      mapRef.current.on(
-        "mouseleave",
-        "aircraft-layer",
-        handleAircraftHoverExit
-      );
-
-      mapRef.current.on("style.load", () => {
-        styleLoadedRef.current = true;
-        mapRef.current?.resize();
-        fetchFlights({
-          variables: { input: { session: selectedSessionRef.current } },
-        });
-        trackUserAction();
-      });
+    if (map && isStyleLoaded && airports.length >= 0) {
+      addOrUpdateAirportsLayer(map, airports, handleAirportClick);
     }
+  }, [map, isStyleLoaded, airports, handleAirportClick]);
 
-    return () => {
-      mapRef.current?.remove();
-    };
-  }, [fetchFlights, handleAircraftClick, handleMapClick]);
+  // add/update Aircraft layer
+  useEffect(() => {
+    if (map && isStyleLoaded) {
+      console.log("Updating aircraft layer.");
+      addOrUpdateAircraftLayer(map, flights);
+    }
+  }, [map, isStyleLoaded, flights]);
+
+  // add/update Flight Path layer
+  useEffect(() => {
+    if (map && isStyleLoaded) {
+      addOrUpdateFlightPathLayer(map, flightPath);
+    }
+  }, [map, isStyleLoaded, flightPath]);
+
+  // resize map when drawer state changes
+  useEffect(() => {
+    map?.resize();
+  }, [drawerExpanded, map]);
 
   // #endregion
 
-  // #region Timeout Modal Handler
+  // #region Map Setup
 
-  const trackUserAction = () => {
-    activityTimerRef.current = new Date();
-  };
+  useEffect(() => {
+    if (!map || !isStyleLoaded || listenersAttachedRef.current) return;
 
-  const handleTimeoutModalClose = () => {
-    setTimeoutModal(false);
-    trackUserAction();
-    timeoutModalState.current = false;
-    if (selectedSessionRef.current) {
-      fetchFlights({
-        variables: { input: { session: selectedSessionRef.current } },
-      });
+    map.on("click", handleMapClick);
+
+    // aircraft layer listeners
+    if (map.getLayer("aircraft-layer")) {
+      map.on<"click">("click", "aircraft-layer", handleAircraftClick as never);
+      map.on("mouseenter", "aircraft-layer", handleAircraftHoverEnter);
+      map.on("mouseleave", "aircraft-layer", handleAircraftHoverExit);
+    } else {
+      console.warn("Aircraft layer not found when attempting to attach listeners.");
     }
-  };
 
-  const handleTimeoutModalOpen = () => {
-    setTimeoutModal(true);
-    timeoutModalState.current = true;
-  };
-
-  // Monitor inactivity and trigger timeout modal
-  useEffect(() => {
-    const interval = setInterval(() => {
-      if (
-        new Date().getTime() - activityTimerRef.current.getTime() >
-        INACTIVITY_TIMEOUT_MS
-      ) {
-        handleTimeoutModalOpen();
-      }
-    }, 1000);
-
-    return () => clearInterval(interval);
-  }, []);
-
-  // Refresh aircraft data
-  useEffect(() => {
-    const interval = setInterval(() => {
-      if (!timeoutModalState.current && selectedSessionRef.current) {
-        fetchFlights({
-          variables: { input: { session: selectedSessionRef.current } },
-        });
-      }
-    }, REFRESH_INTERVAL_MS);
-
-    return () => clearInterval(interval);
-  }, [fetchFlights]);
+    listenersAttachedRef.current = true;
+  }, [map, isStyleLoaded, handleMapClick, handleAircraftClick, handleAircraftHoverEnter, handleAircraftHoverExit]); // Re-run if map or handlers change
 
   // #endregion
 
-  // #region Drawing
+  // #region Render Logic
 
-  /** Updates aircraft layer with fetched flight data */
-  const updateAircraftLayer = (flights: Flights[]) => {
-    if (!mapRef.current || !styleLoadedRef.current) return;
-
-    const geoJsonData: FeatureCollection = {
-      type: "FeatureCollection",
-      features: flights.map((flight) => ({
-        type: "Feature",
-        geometry: {
-          type: "Point",
-          coordinates: [flight.longitude, flight.latitude],
-        },
-        properties: {
-          id: flight.id,
-          heading: flight.heading,
-          icon: "plane-icon",
-        },
-      })),
-    };
-
-    const geoJsonSource: GeoJSONSourceSpecification = {
-      type: "geojson",
-      data: geoJsonData,
-    };
-
-    try {
-      const dataSource = mapRef.current.getSource("aircraft") as GeoJSONSource;
-
-      if (!dataSource) {
-        mapRef.current.addSource("aircraft", geoJsonSource);
-        aircraftDataSourceRef.current = mapRef.current.getSource(
-          "aircraft"
-        ) as GeoJSONSource;
-
-        mapRef.current.addLayer({
-          id: "aircraft-layer",
-          type: "symbol",
-          source: "aircraft",
-          layout: {
-            "icon-image": "test1",
-            "icon-size": 0.3,
-            "icon-allow-overlap": true,
-            "icon-rotate": ["get", "heading"],
-            "icon-rotation-alignment": "map",
-          },
-        });
-      } else {
-        dataSource.setData(geoJsonData);
-      }
-    } catch (error) {
-      console.error("Error updating aircraft layer:", error);
-    }
-  };
-
-  /* This entire function was made by Cameron Alonso, the creator of liveflight.app */
-  const addFlightPositions = (positions: Track[]) => {
-    if (mapRef.current == null || !styleLoadedRef.current) return;
-
-    let coordinates: [number, number][] = [];
-    if (positions.length > 0) {
-      coordinates.push([positions[0].longitude!, positions[0].latitude!]);
-    }
-    let hasCrossedMeridian = false;
-    for (let i = 0; i < positions.length - 1; i++) {
-      const currentCoords = positions[i];
-      const nextCoords = positions[i + 1];
-
-      const startLng = currentCoords.longitude!;
-      const endLng = nextCoords.longitude!;
-
-      if (
-        crossesAntiMeridian([
-          [nextCoords.longitude || 0, nextCoords.latitude || 0],
-          [currentCoords.longitude || 0, currentCoords.latitude || 0],
-        ]) ||
-        hasCrossedMeridian
-      ) {
-        if (endLng - startLng >= 180) {
-          nextCoords.longitude! -= 360;
-        } else if (endLng - startLng < 180) {
-          nextCoords.longitude! += 360;
-        }
-        hasCrossedMeridian = true;
-      }
-
-      coordinates.push([nextCoords.longitude!, nextCoords.latitude!]);
-    }
-
-    // cancelled the simplify function, this is still needed to convert type from arr to obj
-    const simplifiedLine = coordinates.map(([x, y]) => ({ x, y }));
-
-    coordinates = simplifiedLine.map((point) => [point.x, point.y]);
-    const simplifiedPositions = positions.filter((p) =>
-      simplifiedLine.some((l) => l.x == p.longitude && l.y == p.latitude)
-    );
-
-    const features: Feature[] = [];
-    for (let x = 0; x < coordinates.length - 1; x++) {
-      features.push({
-        type: "Feature",
-        properties: {
-          color: colourForAltitude(
-            feetToMetres(simplifiedPositions[x].altitude || 0)
-          ),
-        },
-        geometry: {
-          type: "LineString",
-          coordinates: [coordinates[x], coordinates[x + 1]]!,
-        },
-      });
-    }
-
-    const geoJsonData: GeoJSONSourceSpecification = {
-      type: "geojson",
-      data: {
-        type: "FeatureCollection",
-        features: features,
-      } as FeatureCollection<LineString, GeoJsonProperties>,
-      tolerance: 0.1,
-    };
-
-    if (mapRef.current) {
-      const existingRouteLine = mapRef.current.getSource("flight-route") as
-        | GeoJSONSource
-        | undefined;
-
-      if (!existingRouteLine) {
-        mapRef.current.addSource(
-          "flight-route",
-          geoJsonData as GeoJSONSourceSpecification
-        );
-      } else {
-        existingRouteLine.setData(
-          geoJsonData.data as FeatureCollection<LineString, GeoJsonProperties>
-        );
-      }
-
-      if (!mapRef.current.getLayer("flight-route")) {
-        mapRef.current.addLayer({
-          id: "flight-route",
-          type: "line",
-          source: "flight-route",
-          layout: {
-            "line-join": "round",
-            "line-cap": "round",
-          },
-          paint: {
-            "line-color": ["get", "color"],
-            "line-width": 2,
-          },
-        });
-      }
-    }
-  };
-
-  useEffect(() => {
-    if (mapRef.current) mapRef.current.resize();
-  }, [drawerExpanded]);
-
-  // #endregion
+  if (mapError) {
+    return <div className="error-message">Error initializing map: {mapError.message}</div>;
+  }
 
   return (
     <>
       <MapHeader
         selectedSession={selectedSession}
-        onSessionChange={(e) => setSelectedSession(e)}
+        onSessionChange={setSelectedSession}
         mapStyle={mapStyle}
-        onMapStyleChange={handleMapStyleChange}
+        onMapStyleChange={setMapStyle}
       />
+      {/* Map container */}
       <div id="map-container" ref={mapContainerRef} className={"h-[100vh]"} />
-      <Dialog open={timeoutModal}>
+      {!isStyleLoaded && (
+        <div className="absolute inset-0 flex items-center justify-center bg-black/20 backdrop-blur-sm z-50">
+          <div className="bg-white dark:bg-slate-900 p-4 rounded-lg shadow-lg flex flex-col items-center">
+            <Loader2 className="h-10 w-10 text-primary animate-spin mb-2" />
+            <span className="font-medium">Loading Map...</span>
+          </div>
+        </div>
+      )}
+
+      {/* Inactivity Timeout Modal */}
+      <Dialog open={isTimedOut}>
         <DialogContent className="max-w-[425px] mx-auto [&>button]:hidden">
           <DialogHeader>
             <DialogTitle>Are you still there?</DialogTitle>
             <div className="my-1.5">
-              <DialogDescription>
-                You have been inactive for 15 minutes. To resume where you left
-                off, click continue below.
-              </DialogDescription>
+              <DialogDescription>You&apos;ve been inactive. Click Continue to keep the map live.</DialogDescription>
             </div>
           </DialogHeader>
           <DialogFooter>
             <DialogClose asChild>
-              <Button type="reset" onClick={handleTimeoutModalClose}>
+              <Button type="button" onClick={handleTimeoutContinue}>
                 Continue
               </Button>
             </DialogClose>
           </DialogFooter>
         </DialogContent>
       </Dialog>
-      {selectedFlight && (
-        <>
-          <DrawerProvider
-            handleOpen={handleDrawerOpen}
-            flightId={selectedFlight}
-            currentSession={selectedSession}
-            handleClose={handleDrawerClose}
-          />
-        </>
+
+      {/* Flight Details Drawer */}
+      {selectedFlightId && (
+        <DrawerProvider
+          key={selectedFlightId}
+          handleOpen={() => setDrawerExpanded(true)}
+          flightId={selectedFlightId}
+          currentSession={selectedSession}
+          handleClose={handleFlightDrawerClose}
+        />
+      )}
+
+      {/* Airport Details Drawer */}
+      {selectedAirport && (
+        <AirportProvider key={selectedAirport.icao} airport={selectedAirport} handleClose={handleAirportDrawerClose} />
+      )}
+
+      {(flightsError || airportsError || flightPathError) && (
+        <div
+          style={{
+            position: "absolute",
+            top: "70px",
+            left: "10px",
+            background: "rgba(255,0,0,0.7)",
+            color: "white",
+            padding: "5px",
+            borderRadius: "4px",
+            zIndex: 5
+          }}
+        >
+          {flightsError && <p>Error loading flights: {flightsError.message}</p>}
+          {airportsError && <p>Error loading airports: {airportsError.message}</p>}
+          {flightPathError && <p>Error loading flight path: {flightPathError.message}</p>}
+        </div>
       )}
     </>
   );

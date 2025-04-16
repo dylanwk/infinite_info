@@ -6,7 +6,7 @@ import {
   DialogDescription,
   DialogFooter,
   DialogHeader,
-  DialogTitle,
+  DialogTitle
 } from "./ui/dialog";
 import { Button } from "./ui/button";
 import { Badge } from "./ui/badge";
@@ -28,16 +28,10 @@ const PremiumDialog: React.FC<PremiumDialogProps> = ({ open, onClose }) => {
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <Crown className="h-6 w-6" />
-              <DialogTitle className="text-xl font-bold text-white">
-                InfoPlus Premium
-              </DialogTitle>
+              <DialogTitle className="text-xl font-bold text-white">InfoPlus Premium</DialogTitle>
             </div>
             <DialogClose asChild>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="text-white hover:bg-white/20 rounded-full"
-              >
+              <Button variant="ghost" size="icon" className="text-white hover:bg-white/20 rounded-full">
                 <X className="h-4 w-4" />
               </Button>
             </DialogClose>
@@ -56,12 +50,9 @@ const PremiumDialog: React.FC<PremiumDialogProps> = ({ open, onClose }) => {
                   <Lock className="h-5 w-5" />
                 </div>
                 <div>
-                  <h3 className="font-semibold text-base">
-                    Enhanced Flight Plans
-                  </h3>
+                  <h3 className="font-semibold text-base">Enhanced Flight Plans</h3>
                   <p className="text-sm text-muted-foreground mt-1">
-                    Access detailed waypoints, flight progress tracking, and
-                    route analysis
+                    Access detailed waypoints, flight progress tracking, and route analysis
                   </p>
                 </div>
               </CardContent>
@@ -73,12 +64,9 @@ const PremiumDialog: React.FC<PremiumDialogProps> = ({ open, onClose }) => {
                   <Lock className="h-5 w-5" />
                 </div>
                 <div>
-                  <h3 className="font-semibold text-base">
-                    Advanced Analytics
-                  </h3>
+                  <h3 className="font-semibold text-base">Advanced Analytics</h3>
                   <p className="text-sm text-muted-foreground mt-1">
-                    Visualize flight data with interactive charts and
-                    performance metrics
+                    Visualize flight data with interactive charts and performance metrics
                   </p>
                 </div>
               </CardContent>
@@ -91,9 +79,7 @@ const PremiumDialog: React.FC<PremiumDialogProps> = ({ open, onClose }) => {
             <div className="grid grid-cols-1 gap-2">
               <div className="flex items-center gap-2">
                 <Check className="h-4 w-4 text-primary" />
-                <span className="text-sm">
-                  Real-time flight status notifications
-                </span>
+                <span className="text-sm">Real-time flight status notifications</span>
               </div>
               <div className="flex items-center gap-2">
                 <Check className="h-4 w-4 text-primary" />
@@ -109,16 +95,11 @@ const PremiumDialog: React.FC<PremiumDialogProps> = ({ open, onClose }) => {
             <div>
               <p className="text-lg font-bold">
                 $1.99
-                <span className="text-sm font-normal text-muted-foreground">
-                  /month
-                </span>
+                <span className="text-sm font-normal text-muted-foreground">/month</span>
               </p>
               <p className="text-xs text-muted-foreground">Cancel anytime</p>
             </div>
-            <Badge
-              variant="outline"
-              className="bg-primary/10 text-primary border-primary/20"
-            >
+            <Badge variant="outline" className="bg-primary/10 text-primary border-primary/20">
               14-day free trial
             </Badge>
           </div>

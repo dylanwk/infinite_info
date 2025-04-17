@@ -1,11 +1,11 @@
 "use client";
 
 import React, { useRef, useEffect, useState, useCallback } from "react";
-import mapboxgl, { MapMouseEvent } from "mapbox-gl";
-import "mapbox-gl/dist/mapbox-gl.css";
-import { Airport, DEFAULT, Flights, MapStyle, Track } from "@/lib/types";
+import { MapMouseEvent } from "mapbox-gl";
+import { Airport, DEFAULT, MapStyle, IconSize, PROJECTION_TYPE } from "@/lib/types";
 import client from "@/lib/apolloClient";
-import { Feature, Point, LineString, GeoJsonProperties } from "geojson";
+import { Feature, Point } from "geojson";
+import { AIRCRAFT_ZOOM, AIRPORT_ZOOM } from "@/lib/constants";
 
 import {
   Dialog,
@@ -20,6 +20,7 @@ import { Button } from "./ui/button";
 import { MapHeader } from "./MapHeader";
 import DrawerProvider from "./FlightDrawer/DrawerProvider";
 import AirportProvider from "./AirportDrawer/AirportProvidor";
+import SettingsDialog from "./SettingsDialog";
 import { Loader2 } from "lucide-react";
 
 // Custom Hooks
@@ -28,27 +29,46 @@ import { useMapbox } from "@/hooks/useMapbox";
 import { useFlightsData } from "@/hooks/useFlightsData";
 import { useFlightPathData } from "@/hooks/useFlightpathData";
 import { useTimeout } from "@/hooks/useTimeout";
+import usePersistentState from "@/hooks/usePersistentState";
 
 import { addOrUpdateAirportsLayer, addOrUpdateAircraftLayer, addOrUpdateFlightPathLayer } from "@/lib/mapUtils";
-import { AIRCRAFT_ZOOM, AIRPORT_ZOOM } from "@/lib/constants";
 
 import "../styles/globals.css";
+import "mapbox-gl/dist/mapbox-gl.css";
+
+const SETTINGS_KEYS = {
+  MAP_STYLE: "mapStyle",
+  ICON_SIZE: "mapIconSize",
+  PROJECTION: "mapProjection",
+  SHOW_TRACK: "mapShowTrack",
+  SELECTED_SESSION: "selectedSession"
+};
 
 const Map = () => {
   // #region Refs and State
   const mapContainerRef = useRef<HTMLDivElement>(null);
-  const [selectedSession, setSelectedSession] = useState<string>("");
+  const listenersAttachedRef = useRef(false);
+
   const [selectedFlightId, setSelectedFlightId] = useState<string | null>(null);
   const [selectedAirport, setSelectedAirport] = useState<Airport | null>(null);
   const [drawerExpanded, setDrawerExpanded] = useState(false);
+  const [settingsModal, setSettingsModal] = useState(false);
 
-  const [mapStyle, setMapStyle] = useState<MapStyle>(DEFAULT);
+  // persistent states
+  const [selectedSession, setSelectedSession] = usePersistentState<string>(SETTINGS_KEYS.SELECTED_SESSION, "");
+  const [mapStyle, setMapStyle] = usePersistentState<MapStyle>(SETTINGS_KEYS.MAP_STYLE, DEFAULT);
+  const [iconSize, setIconSize] = usePersistentState<IconSize>(SETTINGS_KEYS.ICON_SIZE, 0.3);
+  const [projection, setProjection] = usePersistentState<PROJECTION_TYPE>(SETTINGS_KEYS.PROJECTION, "globe");
+  const [showTrack, setShowTrack] = usePersistentState<boolean>(SETTINGS_KEYS.SHOW_TRACK, true);
+
   // #endregion
 
   // #region Custom Hook Usage
 
-  const { map, isStyleLoaded, setIsStyleLoaded, mapError } = useMapbox({ containerRef: mapContainerRef });
-  const listenersAttachedRef = useRef(false);
+  const { map, isStyleLoaded, setIsStyleLoaded, mapError } = useMapbox({
+    containerRef: mapContainerRef,
+    initialStyle: mapStyle
+  });
 
   // --- Inactivity Timeout ---
   const { isTimedOut, handleContinue: handleTimeoutContinue } = useTimeout();
@@ -116,15 +136,6 @@ const Map = () => {
     [airports, centerMapOnCoords]
   );
 
-  const handleFlightDrawerClose = useCallback(() => {
-    setDrawerExpanded(false);
-    setSelectedFlightId(null);
-  }, []);
-
-  const handleAirportDrawerClose = useCallback(() => {
-    setSelectedAirport(null);
-  }, []);
-
   // --- Aircraft Layer Interactions ---
 
   const handleAircraftClick = useCallback(
@@ -156,11 +167,47 @@ const Map = () => {
   }, [map]);
 
   // --- General Map Interactions ---
+
   const handleMapClick = useCallback(() => {
     setSelectedFlightId(null);
     setSelectedAirport(null);
     setDrawerExpanded(false);
   }, []);
+
+  const handleFlightDrawerClose = useCallback(() => {
+    setDrawerExpanded(false);
+    setSelectedFlightId(null);
+  }, []);
+
+  const handleAirportDrawerClose = useCallback(() => {
+    setSelectedAirport(null);
+  }, []);
+
+  const handleSettingsClose = () => setSettingsModal(false);
+
+  // toggle map projection
+  const toggleProjection = useCallback(() => {
+    const newProjection = projection === "globe" ? "mercator" : "globe";
+    setProjection(newProjection);
+
+    if (map) {
+      map.setProjection(newProjection);
+      // store current center and zoom
+      const currentCenter = map.getCenter();
+      const currentZoom = map.getZoom();
+
+      // give the map a moment to process the projection change, then fly to same location
+      setTimeout(() => {
+        if (map) {
+          map.flyTo({
+            center: currentCenter,
+            zoom: currentZoom,
+            duration: 1000
+          });
+        }
+      }, 50);
+    }
+  }, [projection, map, setProjection]);
 
   // #endregion
 
@@ -177,14 +224,11 @@ const Map = () => {
       setIsStyleLoaded(true);
       map.resize();
     });
-
-  }, [mapStyle]);
+  }, [mapStyle, map, setIsStyleLoaded]);
 
   // fetch initial airports when map is ready
   useEffect(() => {
     if (isStyleLoaded && selectedSession) {
-      console.log("effect hit with ", selectedSession);
-
       getAirports({ server: selectedSession });
     } else {
       console.log("No session selected, skipping airport fetch.");
@@ -201,22 +245,51 @@ const Map = () => {
   // add/update Aircraft layer
   useEffect(() => {
     if (map && isStyleLoaded) {
-      console.log("Updating aircraft layer.");
-      addOrUpdateAircraftLayer(map, flights);
+      addOrUpdateAircraftLayer(map, flights, iconSize);
     }
-  }, [map, isStyleLoaded, flights]);
+  }, [map, isStyleLoaded, flights, iconSize]);
 
   // add/update Flight Path layer
   useEffect(() => {
     if (map && isStyleLoaded) {
-      addOrUpdateFlightPathLayer(map, flightPath);
+      addOrUpdateFlightPathLayer(map, flightPath, showTrack);
     }
-  }, [map, isStyleLoaded, flightPath]);
+  }, [map, isStyleLoaded, flightPath, showTrack]);
 
   // resize map when drawer state changes
   useEffect(() => {
     map?.resize();
   }, [drawerExpanded, map]);
+
+  // updates map layer each iconSize change
+  useEffect(() => {
+    if (!isStyleLoaded) return;
+
+    if (map && map.getLayer("aircraft-layer")) {
+      map.setLayoutProperty("aircraft-layer", "icon-size", iconSize);
+    }
+  }, [iconSize, isStyleLoaded, map]);
+
+  // handle projection changes
+  useEffect(() => {
+    if (map && isStyleLoaded) {
+      map.setProjection(projection);
+    }
+  }, [projection, isStyleLoaded, map]);
+
+  // effect for flight path visibility
+  useEffect(() => {
+    if (!map || !isStyleLoaded) return;
+
+    const layerId = "flight-route";
+
+    if (map.getLayer(layerId)) {
+      const visibility = showTrack ? "visible" : "none";
+      map.setLayoutProperty(layerId, "visibility", visibility);
+    } else {
+      console.warn(`Layer ${layerId} not found when trying to set visibility.`);
+    }
+  }, [map, isStyleLoaded, showTrack]);
 
   // #endregion
 
@@ -237,7 +310,7 @@ const Map = () => {
     }
 
     listenersAttachedRef.current = true;
-  }, [map, isStyleLoaded, handleMapClick, handleAircraftClick, handleAircraftHoverEnter, handleAircraftHoverExit]); // Re-run if map or handlers change
+  }, [map, isStyleLoaded, handleMapClick, handleAircraftClick, handleAircraftHoverEnter, handleAircraftHoverExit]); // run if map or handlers change
 
   // #endregion
 
@@ -254,7 +327,19 @@ const Map = () => {
         onSessionChange={setSelectedSession}
         mapStyle={mapStyle}
         onMapStyleChange={setMapStyle}
+        onSettingsClick={() => setSettingsModal(true)}
       />
+      <SettingsDialog
+        onIconSizeChange={value => setIconSize(value)}
+        iconSize={iconSize}
+        open={settingsModal}
+        handleClose={handleSettingsClose}
+        projection={projection}
+        onProjectionChange={toggleProjection}
+        showTrack={showTrack}
+        onFPLChange={() => setShowTrack(!showTrack)}
+      />
+
       {/* Map container */}
       <div id="map-container" ref={mapContainerRef} className={"h-[100vh]"} />
       {!isStyleLoaded && (

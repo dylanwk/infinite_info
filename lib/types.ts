@@ -8,6 +8,10 @@ export const DEFAULT = "mapbox://styles/ethaaan/cldfgnal3000201nyv4534tvx/draft"
 
 export type MapStyle = typeof TERRAIN | typeof DARK | typeof SATELLITE | typeof DEFAULT;
 
+export type PROJECTION_TYPE = "globe" | "mercator";
+
+export type IconSize = 0.2 | 0.3 | 0.9;
+
 export type Session = {
   maxUsers: number;
   worldType: number;

@@ -127,9 +127,10 @@ export const addOrUpdateAirportsLayer = (
   });
 };
 
+type IconSize = 0.2 | 0.3 | 0.9;
 
 // --- Add/Update Aircraft Layer ---
-export const addOrUpdateAircraftLayer = (map: Map, flights: Flights[]): GeoJSONSource | null => {
+export const addOrUpdateAircraftLayer = (map: Map, flights: Flights[], iconSize: IconSize): GeoJSONSource | null => {
   if (!map) return null;
 
   const sourceId = "aircraft";
@@ -146,7 +147,7 @@ export const addOrUpdateAircraftLayer = (map: Map, flights: Flights[]): GeoJSONS
       properties: {
         id: flight.id,
         heading: flight.heading,
-        icon: "plane-icon" // ensure this icon is loaded. Will change later
+        icon: "plane-icon", // ensure this icon is loaded. Will change later
       }
     }))
   };
@@ -163,7 +164,7 @@ export const addOrUpdateAircraftLayer = (map: Map, flights: Flights[]): GeoJSONS
       source: sourceId,
       layout: {
         "icon-image": "test1",
-        "icon-size": 0.3,
+        "icon-size": iconSize,
         "icon-allow-overlap": true,
         "icon-rotate": ["get", "heading"],
         "icon-rotation-alignment": "map"
@@ -176,8 +177,8 @@ export const addOrUpdateAircraftLayer = (map: Map, flights: Flights[]): GeoJSONS
 };
 
 // --- Add/Update Flight Path Layer ---
-export const addOrUpdateFlightPathLayer = (map: Map, positions: Track[] | null): void => {
-  if (!map) return;
+export const addOrUpdateFlightPathLayer = (map: Map, positions: Track[] | null, showTrack: boolean): void => {
+  if (!map || !showTrack) return;
 
   const sourceId = "flight-route";
   const layerId = "flight-route";

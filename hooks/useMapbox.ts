@@ -7,9 +7,10 @@ import { DEFAULT, MapStyle } from "@/lib/types";
 interface UseMapboxProps {
   containerRef: React.RefObject<HTMLDivElement>;
   initialOptions?: Omit<mapboxgl.MapOptions, "container">;
+  initialStyle: MapStyle
 }
 
-export const useMapbox = ({ containerRef, initialOptions }: UseMapboxProps) => {
+export const useMapbox = ({ containerRef, initialOptions, initialStyle }: UseMapboxProps) => {
   const mapRef = useRef<Map | null>(null);
   const [isStyleLoaded, setIsStyleLoaded] = useState(false);
   const [mapError, setMapError] = useState<Error | null>(null);
@@ -28,7 +29,7 @@ export const useMapbox = ({ containerRef, initialOptions }: UseMapboxProps) => {
     try {
       const map = new mapboxgl.Map({
         container: containerRef.current,
-        style: DEFAULT,
+        style: initialStyle,
         zoom: 1.8,
         maxZoom: 18,
         renderWorldCopies: false,

@@ -48,6 +48,7 @@ const Map = () => {
   // #region Refs and State
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const listenersAttachedRef = useRef(false);
+  const isInitialMount = useRef(true);
 
   const [selectedFlightId, setSelectedFlightId] = useState<string | null>(null);
   const [selectedAirport, setSelectedAirport] = useState<Airport | null>(null);
@@ -143,6 +144,7 @@ const Map = () => {
       if (!e.features?.length) return;
 
       const flightId = e.features[0]?.properties?.id as string | undefined;
+      console.log("\n ", flightId, "\n")
       const coords = e.features[0]?.geometry.coordinates as number[] | undefined;
 
       if (flightId) {
@@ -213,9 +215,17 @@ const Map = () => {
 
   // #region Map Layer Updates
 
-  // refresh map on style change
+  // handle map style changes
   useEffect(() => {
-    if (!map) return;
+    if (!map || !mapStyle) {
+      return;
+    }
+
+    // skip this effect logic on first run
+    if (isInitialMount.current) {
+      isInitialMount.current = false;
+      return;
+    }
 
     setIsStyleLoaded(false);
     map.setStyle(mapStyle);
@@ -223,8 +233,11 @@ const Map = () => {
     map.once("style.load", () => {
       setIsStyleLoaded(true);
       map.resize();
+      listenersAttachedRef.current = false;
     });
-  }, [mapStyle, map, setIsStyleLoaded]);
+
+  }, [mapStyle, map, setIsStyleLoaded]); 
+
 
   // fetch initial airports when map is ready
   useEffect(() => {

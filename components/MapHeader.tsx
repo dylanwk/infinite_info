@@ -40,6 +40,7 @@ export const MapHeader: React.FC<MapHeaderProps> = ({
   useEffect(() => {
     if (data?.sessionsv2) {
       setSessions(data.sessionsv2);
+      console.log(data.sessionsv2[0].id)
     }
   }, [data]);
 

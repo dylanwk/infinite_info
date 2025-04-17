@@ -179,35 +179,37 @@ export const FPLContent = ({ id }: FPLContentProps) => {
     };
 
     let totalDistance = 0;
+    
+    // Calculate total distance between consecutive waypoints
     for (let i = 0; i < items.length - 1; i++) {
-      const previous = i !== 0 ? items[i - 1] : null;
       const current = items[i];
       const next = items[i + 1];
-      totalDistance += calculateDistance(
+      
+      const legDistance = calculateDistance(
         current.location.latitude,
         current.location.longitude,
         next.location.latitude,
         next.location.longitude
       );
-
-      let distanceFromPrevious = 0;
-      if (previous) {
-        distanceFromPrevious = calculateDistance(
-          previous.location.latitude,
-          previous.location.longitude,
-          current.location.latitude,
-          current.location.longitude
-        );
+      
+      totalDistance += legDistance;
+      
+      // Set distanceFromPrevious for each waypoint
+      if (i < items.length - 1) {
+        items[i + 1].distanceFromPrevious = legDistance * 0.539957; // km to nm, more precise conversion
       }
-
-      items[i].distanceFromPrevious = Math.floor(distanceFromPrevious * 0.539); // km to nm
     }
 
+    // Set first waypoint's distanceFromPrevious to 0
+    items[0].distanceFromPrevious = 0;
+
+    const KILOMETERS_TO_NM = 0.539957;
+    
     return {
       departureId: departure.identifier || departure.name,
       arrivalId: arrival.identifier || arrival.name,
       waypoints: items.length,
-      totalDistance: Math.floor(Math.round(totalDistance) * 0.539), // km to nm
+      totalDistance: Math.round(totalDistance * KILOMETERS_TO_NM), // km to nm, with proper rounding
     };
   }, [flightPlan]);
 

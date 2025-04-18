@@ -66,7 +66,7 @@ const DesktopDrawer: React.FC<DesktopDrawerProps> = ({
         open={drawerOpen}
       >
         {/* Fixed header section */}
-        <div className="p-4">
+        <div className="p-4 pb-1">
           <div className="flex justify-between items-center mt-2">
             <h2 className="text-3xl font-bold">{flight?.callsign || "Flight Details"}</h2>
             <Button variant={"ghost"} className="rounded-full" onClick={handleDrawerClose}>

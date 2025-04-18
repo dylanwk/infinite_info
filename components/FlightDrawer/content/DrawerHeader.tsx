@@ -36,7 +36,7 @@ const DrawerHeader: React.FC<DrawerHeaderProps> = ({
   }
 
   return (
-    <div className="flex flex-col space-y-3 mt-1">
+    <div className="flex flex-col space-y-3 mt-1 mb-1">
       {/* User and aircraft info */}
       <div className="flex flex-col space-y-0">
         <div className="flex items-center space-x-1 text-gray-900">
@@ -80,7 +80,7 @@ const DrawerHeader: React.FC<DrawerHeaderProps> = ({
       <div className="flex flex-row gap-2">
         <Button
           onClick={() => handleClick("flight-plan")}
-          className={`${currentView === "flight-plan" ? "bg-[hsl(191,95%,33%)]" : ""} flex-1 rounded-xl y-0 mt-0`}
+          className={`${currentView === "flight-plan" ? "bg-[hsl(191,95%,33%)]" : ""} flex-1 rounded-xl h-8`}
           variant="default"
         >
           <Map className="mr-2 h-2 w-4" />
@@ -88,7 +88,7 @@ const DrawerHeader: React.FC<DrawerHeaderProps> = ({
         </Button>
         <Button
           onClick={() => handleClick("graph")}
-          className={`${currentView === "graph" ? "bg-[hsl(191,95%,33%)]" : ""} flex-1 rounded-xl`}
+          className={`${currentView === "graph" ? "bg-[hsl(191,95%,33%)]" : ""} flex-1 rounded-xl h-8`}
           variant="default"
         >
           <ChartNetwork className="mr-2 h-2 w-4" />

@@ -118,6 +118,23 @@ export type FlightPlanItem = {
   distanceFromPrevious?: number;
 };
 
+export type FPLDistanceResponse = {
+  flightplan: {
+    flightPlan: {
+      flightPlanItems: FPLDistanceItem[]
+    }
+  }
+}
+
+export type FPLDistanceItem = {
+  location: LocationType;
+  children: ChildItem[] | null
+}
+
+export type ChildItem = {
+  location: LocationType;
+}
+
 export type LocationType = {
   altitude: number;
   latitude: number;

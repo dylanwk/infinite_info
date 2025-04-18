@@ -151,3 +151,27 @@ export const GET_FLIGHTPLAN = gql`
     }
   }
 `;
+
+
+export const GET_FPL_DISTANCE = gql`
+  query flightplan($flightplanId: String!) {
+    flightplan(id: $flightplanId) {
+      flightPlan {
+        flightPlanItems {
+          location {
+            altitude
+            latitude
+            longitude
+          }
+          children {
+            location {
+              altitude
+              latitude
+              longitude
+            }
+          }
+        }
+      }
+    }
+  }
+`;

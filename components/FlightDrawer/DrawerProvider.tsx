@@ -1,14 +1,15 @@
 import client from "@/lib/apolloClient";
-import { GET_FLIGHT } from "@/lib/query";
-import { DrawerView, Flight, GQL_Track_Type } from "@/lib/types";
+import { GET_FLIGHT, GET_FPL_DISTANCE } from "@/lib/query";
+import { DrawerView, Flight, FPLDistanceResponse, GQL_Track_Type } from "@/lib/types";
 import { useLazyQuery } from "@apollo/client";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { GraphContent } from "./content/GraphContent";
 import { FPLContent } from "./content/FPLContent";
 import DefaultContent from "./content/DefaultContent";
 import DesktopDrawer from "./DesktopDrawer";
-import useMediaQuery from "@mui/material/useMediaQuery";
 import MobileDrawer from "./MobileDrawer";
+import useMediaQuery from "@mui/material/useMediaQuery";
+import { Coordinate, calculateTotalFPLDistance, distanceLeft } from "@/lib/fplUtils";
 
 interface DrawerProviderProps {
   flightId: string | null;
@@ -51,13 +52,110 @@ const useFlightData = (flightId: string | null, currentSession: string) => {
     }
   });
 
+  useEffect(() => {
+    if (flightId) {
+      getFlightInfo({
+        variables: { input: { id: flightId, session: currentSession } }
+      });
+    }
+  }, [flightId, currentSession, getFlightInfo]);
+
   return {
     flight,
     track,
     loading,
-    error,
-    getFlightInfo
+    error
   };
+};
+
+/**
+ * Custom hook to fetch and process flight plan data
+ */
+const useFPLData = (flightId: string | null) => {
+  const [coords, setCoords] = useState<Coordinate[]>([]);
+
+  const [getFPLDistance, { loading, error }] = useLazyQuery<FPLDistanceResponse>(GET_FPL_DISTANCE, {
+    client,
+    fetchPolicy: "cache-first",
+    onCompleted: data => {
+      if (data?.flightplan?.flightPlan?.flightPlanItems) {
+        // flatten all valid coordinates from flight plan items
+        const validCoordinates: Coordinate[] = [];
+
+        data.flightplan.flightPlan.flightPlanItems.forEach(item => {
+          // check valid coordinates
+          if (item.location && item.location.latitude !== 0 && item.location.longitude !== 0) {
+            validCoordinates.push({
+              latitude: item.location.latitude,
+              longitude: item.location.longitude
+            });
+          }
+
+          if (item.children && Array.isArray(item.children)) {
+            item.children.forEach(child => {
+              if (child.location && child.location.latitude !== 0 && child.location.longitude !== 0) {
+                validCoordinates.push({
+                  latitude: child.location.latitude,
+                  longitude: child.location.longitude
+                });
+              }
+            });
+          }
+        });
+
+        setCoords(validCoordinates);
+      }
+    }
+  });
+
+  useEffect(() => {
+    if (flightId) {
+      getFPLDistance({
+        variables: { flightplanId: flightId }
+      });
+    }
+  }, [flightId, getFPLDistance]);
+
+  return {
+    coords,
+    loading,
+    error
+  };
+};
+
+/**
+ * Custom hook to calculate flight progress metrics
+ */
+const useFlightProgress = (coords: Coordinate[], flight: Flight | null) => {
+  return useMemo(() => {
+    if (!flight || coords.length < 2) {
+      return {
+        totalDistance: 0,
+        distanceToGo: 0,
+        distanceFlown: 0,
+        progressRatio: 0
+      };
+    }
+
+    const planeCoords: Coordinate = {
+      latitude: flight.latitude,
+      longitude: flight.longitude
+    };
+
+    const totalDistance = calculateTotalFPLDistance(coords);
+    const distanceToGo = distanceLeft(coords, planeCoords);
+    const distanceFlown = totalDistance - distanceToGo;
+
+    // Fix: Ensure we don't divide by zero and convert to percentage properly
+    const progressRatio = totalDistance > 0 ? Math.floor((distanceFlown / totalDistance) * 100) : 0;
+
+    return {
+      totalDistance,
+      distanceToGo,
+      distanceFlown,
+      progressRatio
+    };
+  }, [coords, flight]);
 };
 
 /**
@@ -73,12 +171,6 @@ const useDrawerView = (flight: Flight | null) => {
     setCurrentView("default");
   }, [flight]);
 
-  // Handle premium dialog visibility
-  useEffect(() => {
-    const isPremiumView = currentView === "graph" || currentView === "flight-plan";
-    setOpenPremiumDialog(isPremiumView && !isVerified);
-  }, [currentView, isVerified]);
-
   const handleClick = useCallback((value: DrawerView) => {
     setCurrentView(prevView => (prevView === value ? "default" : value));
   }, []);
@@ -91,63 +183,67 @@ const useDrawerView = (flight: Flight | null) => {
 
   return {
     currentView,
-    isVerified,
     openPremiumDialog,
     handleClick,
     handleDialogClose
   };
 };
 
+/**
+ * Main DrawerProvider component that orchestrates all the hooks and UI rendering
+ */
 export default function DrawerProvider({ flightId, currentSession, handleClose, handleOpen }: DrawerProviderProps) {
   const isMobile = useMediaQuery("(max-width: 768px)");
   const [drawerOpen, setDrawerOpen] = useState(false);
 
   // Custom hooks for data and state management
-  const { flight, track, loading, error, getFlightInfo } = useFlightData(flightId, currentSession);
-  const { currentView, isVerified, openPremiumDialog, handleClick, handleDialogClose } = useDrawerView(flight);
+  const { flight, track, loading: flightLoading, error: flightError } = useFlightData(flightId, currentSession);
+  const { coords, loading: coordsLoading, error: coordsError } = useFPLData(flightId);
+  const { currentView, handleClick, openPremiumDialog, handleDialogClose } = useDrawerView(flight);
+  const flightProgress = useFlightProgress(coords, flight);
+  const progressRatio = flightProgress.progressRatio;
 
-  // Fetch flight data when flightId or session changes
+  // Handle drawer opening/closing
   useEffect(() => {
     if (flightId) {
       setDrawerOpen(true);
-      getFlightInfo({
-        variables: { input: { id: flightId, session: currentSession } }
-      });
       handleOpen();
     } else {
       setDrawerOpen(false);
     }
-  }, [flightId, currentSession, getFlightInfo, handleOpen]);
+  }, [flightId, handleOpen]);
 
+  // generate content based on current view
   const getViewContent = useCallback(() => {
     if (!flight) return null;
 
     switch (currentView) {
       case "graph":
-        if (!isVerified) return null;
         return <GraphContent tracks={track} callsign={flight.callsign || "Anonymous"} />;
 
       case "flight-plan":
-        if (!isVerified) return null;
         return <FPLContent id={flight.id} />;
 
       default:
-        return <DefaultContent currentSession={currentSession} flight={flight} />;
+        return <DefaultContent currentSession={currentSession} flight={flight} flightProgress={flightProgress} />;
     }
-  }, [currentView, flight, isVerified, track, currentSession]);
+  }, [currentView, flight, track, currentSession, flightProgress]);
 
-  // Common props for drawer components
+  const isLoading = flightLoading || coordsLoading;
+  const hasError = flightError || coordsError;
+
+  // common props for drawer components
   const drawerProps = {
     drawerOpen,
     openPremiumDialog,
     handleDialogClose,
     flight,
     currentView,
-    isVerified,
     handleClick,
-    loading,
-    error,
-    getViewContent
+    loading: isLoading,
+    error: hasError,
+    getViewContent,
+    progressRatio
   };
 
   return isMobile ? (

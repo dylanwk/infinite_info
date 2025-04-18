@@ -7,44 +7,36 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 interface DefaultContentProps {
   flight: Flight;
   currentSession: string;
+  flightProgress: {
+    totalDistance: number;
+    distanceToGo: number;
+    distanceFlown: number;
+    progressRatio: number;
+  }
 }
 
-export default function DefaultContent({ flight, currentSession }: DefaultContentProps) {
+export default function DefaultContent({ flight, flightProgress }: DefaultContentProps) {
+  
   return (
     <div className="space-y-4">
       {/* Flight Information */}
       <Card>
         <CardHeader className="pb-2">
-          <CardTitle className="text-lg">Flight Information</CardTitle>
+          <CardTitle className="text-lg">Progress</CardTitle>
         </CardHeader>
         <CardContent className="pt-0">
           <div className="space-y-2">
-            <DetailItem label="Callsign" value={flight.callsign} />
-            <DetailItem label="Aircraft" value={flight.aircraft} />
-            <DetailItem label="Livery" value={flight.livery || "N/A"} />
-            <DetailItem label="Flight ID" value={flight.id} truncate />
+            {Math.ceil(flightProgress.distanceFlown)} nm flown out of {Math.ceil(flightProgress.totalDistance)} nm
           </div>
         </CardContent>
       </Card>
 
-      {/* Pilot Information */}
-      <Card>
-        <CardHeader className="pb-2">
-          <CardTitle className="text-lg">Pilot Information</CardTitle>
-        </CardHeader>
-        <CardContent className="pt-0">
-          <div className="space-y-2">
-            <DetailItem label="User ID" value={flight.userId} truncate />
-            <DetailItem label="Username" value={flight.username || "N/A"} />
-            <DetailItem label="Organization" value={flight.org || "N/A"} />
-          </div>
-        </CardContent>
-      </Card>
+      
 
       {/* Takeoff Times */}
       <Card>
         <CardHeader className="pb-2">
-          <CardTitle className="text-lg">Takeoff Times</CardTitle>
+          <CardTitle className="text-lg">Departure</CardTitle>
         </CardHeader>
         <CardContent className="pt-0 p-0">
           {flight.takeoffTimes.length > 0 ? (
@@ -56,8 +48,8 @@ export default function DefaultContent({ flight, currentSession }: DefaultConten
                       <div className="mb-1 font-medium">Takeoff {index + 1}</div>
                       <div className="space-y-1 text-sm">
                         <div className="flex justify-between">
-                          <span className="text-muted-foreground">Heading</span>
-                          <span>{Math.round(takeoff.a)}°</span>
+                          <span className="text-muted-foreground">Altitude</span>
+                          <span>{Math.round(takeoff.a)}ft</span>
                         </div>
                         <div className="flex justify-between">
                           <span className="text-muted-foreground">Coordinates</span>
@@ -85,7 +77,7 @@ export default function DefaultContent({ flight, currentSession }: DefaultConten
       {/* Landing Times */}
       <Card>
         <CardHeader className="pb-2">
-          <CardTitle className="text-lg">Landing Times</CardTitle>
+          <CardTitle className="text-lg">Arrival</CardTitle>
         </CardHeader>
         <CardContent className="pt-0 p-0">
           {flight.landingTimes.length > 0 ? (
